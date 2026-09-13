@@ -3,6 +3,3 @@
 # de Python para construir y mostrar los prompts y validar el formato de
 # salida (JSON). No se requieren paquetes externos para ejecutar main.py.
 #
-# Se deja este archivo por buenas prácticas y para futura extensión del
-# proyecto (por ejemplo, si más adelante se conecta un LLM real siguiendo
-# el patrón visto en clase con langchain / chromadb, como en 6_retriever.py).

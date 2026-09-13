@@ -13,8 +13,7 @@ en **crianza positiva y responsable**.
 
 CrianzApp está pensado para acompañar a madres, padres y cuidadores con
 dudas frecuentes de crianza (rabietas, límites, comunicación, rutinas,
-manejo emocional), y para detectar cuándo una consulta debe derivarse a
-un profesional (por ejemplo, ante señales de maltrato o riesgo).
+manejo emocional).
 
 ## 2. Técnicas de Prompt Engineering aplicadas
 
@@ -78,30 +77,7 @@ crianza-positiva-chatbot/
     └── output_formatter.py    # Contrato de salida + validación + simulación
 ```
 
-## 5. Cómo ejecutarlo (entorno virtual)
-
-```bash
-# 1. Crear el entorno virtual
-python3 -m venv venv
-
-# 2. Activarlo
-source venv/bin/activate        # Linux / Mac
-venv\Scripts\activate           # Windows
-
-# 3. Instalar dependencias (no hay dependencias externas por ahora)
-pip install -r requirements.txt
-
-# 4. Ejecutar la demo
-python3 main.py
-```
-
-La salida en consola muestra, para dos casos de ejemplo:
-1. El **prompt completo** que se enviaría a un LLM (system prompt +
-   ejemplos few-shot + contexto delimitado).
-2. La **respuesta simulada** en formato JSON, ya validada contra el
-   esquema definido.
-
-## 6. Relación con lo visto en clase
+## 5. Relación con lo visto en clase "en qué nos basamos para hacer este código"
 
 Este proyecto retoma la lógica de carga y estructuración de contexto
 usada en los ejemplos de clase (`1_a_csv_loader.py`, `2_pdf_loader.py`,
