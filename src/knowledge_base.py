@@ -23,8 +23,20 @@ def _normalizar(texto: str) -> str:
     )
 
 
+PALABRAS_COMUNES = {
+    "a", "al", "cada", "con", "como", "de", "del", "el", "en", "es",
+    "esta", "este", "hacer", "la", "las", "le", "los", "mi", "no",
+    "niña", "niño", "o", "para", "que", "se", "su", "tiene", "un", "una",
+    "y", "años",
+}
+
+
 def _tokens(texto: str) -> set[str]:
-    return set(re.findall(r"[a-z0-9]+", _normalizar(texto)))
+    tokens = set(re.findall(r"[a-z0-9]+", _normalizar(texto)))
+    return {
+        token[:-1] if token.endswith("s") and len(token) > 4 else token
+        for token in tokens - PALABRAS_COMUNES
+    }
 
 
 class BaseConocimientoLocal:
