@@ -7,14 +7,10 @@ el System Prompt) y una función de validación que comprueba que una
 respuesta cumple ese contrato.
 
 Al no conectarse a un LLM real en este proyecto, `output_formatter`
-también incluye un generador de respuesta SIMULADA: una función que,
-dado un texto de entrada, arma una respuesta de ejemplo con el formato
-correcto. Esto permite mostrar de principio a fin cómo se vería la
-ejecución del prompt (entrada -> prompt estructurado -> salida esperada)
-sin depender de una API externa.
+genera respuestas deterministas a partir de fragmentos recuperados desde
+la base de conocimiento local y conserva una ruta de simulación para
+compatibilidad con la demo original.
 """
-
-from typing import Optional
 
 CLAVES_ESPERADAS = {
     "resumen_breve": str,
@@ -95,6 +91,58 @@ def generar_respuesta_simulada(contexto: str, pregunta: str) -> dict:
                 "Valida la emoción del niño/a sin ceder el límite.",
                 "Mantén la calma y la coherencia en la respuesta.",
                 "Refuerza positivamente cuando logre regularse.",
+            ],
+            "senal_alerta": None,
+            "derivar_a_profesional": False,
+        }
+
+    validar_formato(respuesta)
+    return respuesta
+
+
+def generar_respuesta_local(contexto: str, pregunta: str, fragmentos: list) -> dict:
+    """Responde con fragmentos de la base local, sin usar un LLM."""
+    texto_completo = f"{contexto} {pregunta}".lower()
+    hay_alerta = any(palabra in texto_completo for palabra in PALABRAS_ALERTA)
+
+    if hay_alerta:
+        respuesta = {
+            "resumen_breve": (
+                "Gracias por compartir esta situación; lo que describes "
+                "requiere atención profesional inmediata."
+            ),
+            "estrategias": [
+                "Cree en lo que el niño o niña te está contando.",
+                "No lo confrontes ni lo hagas repetir la historia varias veces.",
+                "Contacta cuanto antes a una entidad especializada en "
+                "protección infantil (en Colombia: ICBF, línea 141).",
+            ],
+            "senal_alerta": (
+                "El relato contiene indicios de posible riesgo o "
+                "vulneración hacia el menor."
+            ),
+            "derivar_a_profesional": True,
+        }
+    elif fragmentos:
+        respuesta = {
+            "resumen_breve": (
+                "Encontré información relacionada en la base de "
+                "conocimiento local. Estas son las orientaciones "
+                "recuperadas para tu consulta."
+            ),
+            "estrategias": [fragmento.texto for fragmento in fragmentos[:4]],
+            "senal_alerta": None,
+            "derivar_a_profesional": False,
+        }
+    else:
+        respuesta = {
+            "resumen_breve": (
+                "No encontré información suficiente en la base de "
+                "conocimiento local para responder con seguridad."
+            ),
+            "estrategias": [
+                "Reformula la pregunta con términos más específicos.",
+                "Consulta una fuente profesional relacionada con tu situación.",
             ],
             "senal_alerta": None,
             "derivar_a_profesional": False,

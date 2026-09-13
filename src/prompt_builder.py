@@ -39,7 +39,11 @@ def _formatear_ejemplo(ejemplo: dict, numero: int) -> str:
     )
 
 
-def build_prompt(contexto_usuario: str, pregunta_usuario: str) -> str:
+def build_prompt(
+    contexto_usuario: str,
+    pregunta_usuario: str,
+    conocimiento_recuperado: str = "",
+) -> str:
     """
     Ensambla el prompt final.
 
@@ -50,6 +54,8 @@ def build_prompt(contexto_usuario: str, pregunta_usuario: str) -> str:
         niño/a, situación previa). Puede ir vacío.
     pregunta_usuario : str
         La pregunta o situación puntual que se quiere resolver.
+    conocimiento_recuperado : str
+        Fragmentos recuperados desde la base local, si existen.
 
     Returns
     -------
@@ -79,8 +85,13 @@ la estructura JSON, no el contenido literal.
 \"\"\"{pregunta_usuario.strip()}\"\"\"
 </pregunta_usuario>
 
+<base_conocimiento>
+\"\"\"{conocimiento_recuperado.strip()}\"\"\"
+</base_conocimiento>
+
 <instruccion_final>
-Usando únicamente la información dentro de <contexto> y <pregunta_usuario>,
+Usando únicamente la información dentro de <contexto>, <pregunta_usuario> y
+<base_conocimiento>,
 responde siguiendo ESTRICTAMENTE el formato definido en <formato_salida>
 del system prompt. No expliques tu razonamiento, entrega solo el JSON.
 </instruccion_final>
