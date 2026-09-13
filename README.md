@@ -28,8 +28,10 @@ comportamiento base del asistente: rol, público objetivo, tono, alcance
 ### 2.2 Few-Shot Prompting
 En [`src/few_shot_examples.py`](src/few_shot_examples.py) se incluyen
 ejemplos de pares *pregunta → respuesta ideal* que se insertan en el
-prompt para que el modelo imite el formato JSON esperado, incluyendo un
-caso cotidiano y un caso de alerta (derivación a profesional).
+prompt para definir el formato JSON esperado, incluyendo un caso cotidiano
+y un caso de alerta (derivación a profesional). Los ejemplos quedan
+preparados para un modelo futuro, pero en este entregable no se conecta
+ningún LLM.
 
 ### 2.3 Estrategias de Delimitadores
 En [`src/prompt_builder.py`](src/prompt_builder.py) se combinan dos
@@ -76,7 +78,6 @@ crianza-positiva-chatbot/
 ├── requirements.txt
 ├── README.md
 ├── docs/
-│   ├── ejecucion_prompt.pdf   # Explicación de la ejecución (evidencias)
 │   └── base_conocimiento/
 │       └── guia_crianza.md    # Fuente local consultada por el asistente
 └── src/
@@ -87,7 +88,7 @@ crianza-positiva-chatbot/
     └── knowledge_base.py      # Carga y recuperación local de documentos
 ```
 
-## 5. Relación con lo visto en clase "en qué nos basamos para hacer este código"
+## 5. Relación con lo visto en clase
 
 Este proyecto retoma la lógica de carga y estructuración de contexto
 usada en los ejemplos de clase (`1_a_csv_loader.py`, `2_pdf_loader.py`,
@@ -97,14 +98,14 @@ aplica esa misma idea de plantilla de prompt, pero el "contexto" es la
 situación de crianza que describe el usuario, y la conexión a un LLM
 real queda fuera del alcance de este entregable.
 
-## 7. Privacidad y límites técnicos
+## 6. Privacidad y límites técnicos
 
 La búsqueda usa coincidencia léxica local; no es un modelo generativo ni
 un sistema RAG semántico. Para ampliar la base, agrega archivos `.md` o
 `.txt` dentro de `docs/base_conocimiento/`. Ningún archivo se sube a
 Internet y `requirements.txt` no requiere paquetes externos.
 
-## 8. Límites éticos
+## 7. Límites éticos
 
 CrianzApp **no reemplaza** la atención de un psicólogo, psiquiatra
 infantil o autoridad de protección de menores. Ante cualquier indicio de
