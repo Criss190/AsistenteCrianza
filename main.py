@@ -1,102 +1,55 @@
 # -*- coding: utf-8 -*-
-"""
-main.py
---------
-Punto de entrada de la demo de "CrianzApp".
+"""Aplicación web CrianzApp: chat RAG con conocimiento local y Groq opcional."""
 
-Este script NO se conecta a ningún LLM (Gemini, GPT, etc.). Su objetivo es
-demostrar, de forma local, las tres técnicas de Prompt Engineering
-pedidas en el alcance del ejercicio:
+from flask import Flask, jsonify, render_template, request
 
-    1. Diseño de Prompts (System Prompt)      -> src/system_prompt.py
-    2. Few-Shot Prompting                     -> src/few_shot_examples.py
-    3. Estrategias de Delimitadores           -> src/prompt_builder.py
-                                                  (triple comillas + XML tags)
-
-Flujo de ejecución:
-    entrada del usuario -> build_prompt() arma el prompt completo
-                         -> se imprime el prompt (lo que se enviaría a un LLM)
-                                 -> generar_respuesta_local() recupera evidencia y
-                                     produce la salida JSON exigida
-                         -> validar_formato() confirma que cumple el contrato
-"""
-
-import json
-from src.knowledge_base import BaseConocimientoLocal
-from src.prompt_builder import build_prompt
-from src.output_formatter import generar_respuesta_local, validar_formato
-
-SEPARADOR = "=" * 70
+from src.rag_chat import ChatRAG
 
 
-def ejecutar_caso(
-    contexto: str,
-    pregunta: str,
-    titulo: str,
-    base_conocimiento: BaseConocimientoLocal,
-) -> None:
-    print(SEPARADOR)
-    print(f"CASO: {titulo}")
-    print(SEPARADOR)
-
-    # 1) Construcción del prompt estructurado (system + few-shot + contexto)
-    fragmentos = base_conocimiento.buscar(f"{contexto} {pregunta}")
-    conocimiento = "\n\n".join(
-        f"[Fuente local: {fragmento.fuente}]\n{fragmento.texto}"
-        for fragmento in fragmentos
-    )
-    prompt = build_prompt(
-        contexto_usuario=contexto,
-        pregunta_usuario=pregunta,
-        conocimiento_recuperado=conocimiento,
-    )
-    print("\n--- PROMPT ENVIADO (system + few-shot + contexto delimitado) ---\n")
-    print(prompt)
-
-    # 2) Respuesta determinista usando únicamente la base local recuperada.
-    respuesta = generar_respuesta_local(
-        contexto=contexto,
-        pregunta=pregunta,
-        fragmentos=fragmentos,
-    )
-    validar_formato(respuesta)
-
-    print("\n--- FUENTES LOCALES RECUPERADAS ---\n")
-    print(
-        "\n".join(sorted({fragmento.fuente for fragmento in fragmentos}))
-        or "Ninguna"
-    )
-
-    print("\n--- RESPUESTA DEL ASISTENTE (formato JSON validado) ---\n")
-    print(json.dumps(respuesta, ensure_ascii=False, indent=2))
-    print("\n")
+app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
+chat_rag = ChatRAG()
 
 
-def main():
-    base_conocimiento = BaseConocimientoLocal.cargar("docs/base_conocimiento")
+@app.get("/")
+def inicio():
+    """Sirve la interfaz web del asistente."""
+    return render_template("index.html")
 
-    # Caso 1: situación cotidiana de crianza (no requiere alerta)
-    ejecutar_caso(
-        contexto="El niño tiene 4 años y va a preescolar.",
-        pregunta=(
-            "Cada vez que le digo que apague la tele hace una rabieta "
-            "enorme, grita y se tira al piso. No sé si ceder o no."
-        ),
-        titulo="Rabieta por límite de pantallas (situación cotidiana)",
-        base_conocimiento=base_conocimiento,
-    )
 
-    # Caso 2: señal de alerta (debe derivar a profesional)
-    ejecutar_caso(
-        contexto="La niña tiene 7 años.",
-        pregunta=(
-            "Mi hija me contó que un familiar la toca de una forma que "
-            "la incomoda. No sé qué hacer."
-        ),
-        titulo="Posible situación de riesgo (debe derivar a profesional)",
-        base_conocimiento=base_conocimiento,
-    )
+@app.get("/api/health")
+def health():
+    """Estado mínimo para comprobaciones de disponibilidad de Render."""
+    return jsonify(chat_rag.estado())
+
+
+@app.post("/api/chat")
+def chat():
+    """Recibe un mensaje, recupera evidencia y devuelve respuesta y fuentes."""
+    datos = request.get_json(silent=True)
+    if not isinstance(datos, dict):
+        return jsonify(error="Envía los datos del chat como JSON."), 400
+
+    mensaje = datos.get("message")
+    if not isinstance(mensaje, str) or not mensaje.strip():
+        return jsonify(error="Escribe una pregunta para continuar."), 400
+    if len(mensaje) > 2000:
+        return jsonify(error="El mensaje debe tener 2.000 caracteres o menos."), 400
+
+    historial = datos.get("history", [])
+    if not isinstance(historial, list):
+        historial = []
+
+    try:
+        resultado = chat_rag.responder(mensaje.strip(), historial=historial)
+    except Exception:
+        app.logger.exception("Error procesando la consulta RAG")
+        return jsonify(
+            error="Ocurrió un problema al procesar tu consulta. Inténtalo de nuevo."
+        ), 500
+
+    return jsonify(resultado)
 
 
 if __name__ == "__main__":
-    main()
+    app.run(host="0.0.0.0", port=5000, debug=False)

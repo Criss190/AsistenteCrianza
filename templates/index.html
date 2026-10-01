@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f7f2">
+  <meta name="description" content="Orientación cálida y práctica para una crianza positiva y responsable, con respuestas basadas en una guía de conocimiento local.">
+  <title>CrianzApp — Crianza con calma</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="CrianzApp, inicio">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="none"><path d="M20 34s-13-7.5-13-17a7.5 7.5 0 0 1 13-5 7.5 7.5 0 0 1 13 5c0 9.5-13 17-13 17Z" fill="currentColor"/><path d="M13.5 20.5c2.1 0 3.1-2.6 4.4-2.6 1.1 0 1.4 4.4 2.6 4.4s2.2-5.2 3.4-5.2c1 0 1.5 3.4 3 3.4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </span>
+        <span><strong>CrianzApp</strong><small>criar también es cuidar</small></span>
+      </a>
+
+      <button class="new-chat" id="new-chat" type="button">
+        <span aria-hidden="true">＋</span> Nueva conversación
+      </button>
+
+      <div class="sidebar-section">
+        <span class="eyebrow">UN ESPACIO PARA ACOMPAÑARTE</span>
+        <h2>Criar con calma también se aprende.</h2>
+        <p>Un lugar cercano para pensar situaciones cotidianas y encontrar ideas prácticas, sin juicios.</p>
+      </div>
+
+      <div class="focus-card">
+        <div class="focus-icon" aria-hidden="true">✳</div>
+        <div>
+          <strong>Orientación responsable</strong>
+          <p>Para madres, padres y cuidadores de niños y niñas de 0 a 12 años.</p>
+        </div>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="knowledge-state"><span class="state-dot"></span><span id="knowledge-status">Guía local conectada</span></div>
+        <p class="privacy-note">Tus mensajes se usan para responder esta conversación. No compartas datos personales que permitan identificar a un menor.</p>
+        <a href="https://www.icbf.gov.co/" target="_blank" rel="noreferrer">Protección infantil · ICBF ↗</a>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark" aria-hidden="true">♡</span><strong>CrianzApp</strong></div>
+        <div class="topbar-label"><span class="sparkle" aria-hidden="true">✳</span> Acompañamiento para la crianza</div>
+        <div class="topbar-right"><span class="secure-label"><span aria-hidden="true">●</span> Espacio de orientación</span></div>
+      </header>
+
+      <section class="chat-layout" aria-label="Chat de CrianzApp">
+        <div class="conversation-heading">
+          <span class="eyebrow">CRIANZA POSITIVA Y RESPONSABLE</span>
+          <h1>¿Qué te gustaría conversar?</h1>
+          <p>Cuéntame qué está pasando. Lo pensamos paso a paso, con empatía y sin culpas.</p>
+        </div>
+
+        <div class="conversation" id="conversation" aria-live="polite" aria-label="Mensajes de la conversación">
+          <article class="message assistant-message welcome-message">
+            <div class="assistant-avatar" aria-hidden="true">✳</div>
+            <div class="message-column">
+              <div class="message-meta"><strong>CrianzApp</strong><span>orientación cercana</span></div>
+              <div class="bubble">
+                <p>Hola, qué bueno que estés aquí. A veces una situación pequeña puede sentirse enorme cuando estamos criando. ¿Qué te preocupa hoy?</p>
+                <p class="welcome-footnote">Puedo compartir ideas prácticas basadas en la guía de crianza del proyecto.</p>
+              </div>
+            </div>
+          </article>
+          <div class="suggestions" id="suggestions" aria-label="Preguntas sugeridas">
+            <button type="button" class="suggestion">Mi hijo hace rabietas cuando le pongo límites</button>
+            <button type="button" class="suggestion">¿Cómo puedo ayudarle a expresar lo que siente?</button>
+            <button type="button" class="suggestion">Quiero crear una rutina para las pantallas</button>
+          </div>
+        </div>
+
+        <div class="composer-wrap">
+          <form class="composer" id="chat-form">
+            <label class="sr-only" for="message-input">Escribe tu consulta</label>
+            <textarea id="message-input" name="message" rows="1" maxlength="2000" placeholder="Escribe aquí lo que está pasando…" required></textarea>
+            <button class="send-button" id="send-button" type="submit" aria-label="Enviar mensaje">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 3 10.8 13.2M21 3l-6.5 18-3.7-7.8L3 9.5 21 3Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </form>
+          <div class="composer-foot"><span>Enter para enviar · Shift + Enter para una nueva línea</span><span id="char-count">0 / 2000</span></div>
+          <p class="disclaimer">CrianzApp ofrece orientación general y no reemplaza la atención de un profesional.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

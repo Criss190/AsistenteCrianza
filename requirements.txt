@@ -1,5 +1,3 @@
-# CrianzApp - dependencias
-# Este proyecto NO se conecta a ningún LLM: solo usa la librería estándar
-# de Python para construir y mostrar los prompts y validar el formato de
-# salida (JSON). No se requieren paquetes externos para ejecutar main.py.
-#
+Flask>=3.0,<4.0
+groq>=0.13,<2.0
+gunicorn>=22.0,<24.0
