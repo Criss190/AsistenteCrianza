@@ -23,7 +23,7 @@ Requiere Python 3.12 o posterior.
 
 Sin `GROQ_API_KEY`, el chat sigue disponible en modo local extractivo. Copia `.env.example` como `.env` para completar tus claves localmente. El archivo `.env` no se carga automáticamente; configura las variables en tu entorno antes de iniciar la aplicación.
 
-Para ejecutar la evaluación dentro del entorno Python 3.12.8, ejecuta desde la raíz `./.venv312/bin/python -m dotenv run -- ./.venv312/bin/python eval_ragas.py`. El script carga `.env`, usa OpenAI para evaluar preguntas y fragmentos recuperados, y crea `ragas_results.json`. El dataset con 15 preguntas está en `eval_dataset.json`.
+Para ejecutar la evaluación dentro del entorno Python 3.12.8, configura `GOOGLE_API_KEY` en `.env` y ejecuta desde la raíz `./.venv312/bin/python -m dotenv run -- ./.venv312/bin/python eval_ragas.py`. El script usa Gemini para puntuar preguntas y fragmentos recuperados y crea `ragas_results.json`. Puedes cambiar el modelo con `RAGAS_LLM_MODEL`; el valor predeterminado es `gemini-3.8-flash`. El dataset con 15 preguntas está en `eval_dataset.json`.
 
 ## Desplegar en Render
 

@@ -9,7 +9,10 @@ from pathlib import Path
 from typing import Any
 
 from datasets import Dataset
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_google_genai import (
+    ChatGoogleGenerativeAI,
+    GoogleGenerativeAIEmbeddings,
+)
 import pandas as pd
 from ragas import evaluate
 from ragas.metrics import (
@@ -18,6 +21,8 @@ from ragas.metrics import (
     context_recall,
     faithfulness,
 )
+from ragas.embeddings.base import LangchainEmbeddingsWrapper
+from ragas.llms.base import LangchainLLMWrapper
 from ragas.run_config import RunConfig
 
 from src.rag_chat import ChatRAG
@@ -96,34 +101,67 @@ def recolectar_evidencia(
 
 def main() -> None:
     """Ejecuta Ragas, muestra el promedio de métricas y guarda resultados."""
-    if not os.getenv("OPENAI_API_KEY", "").strip():
+    if not os.getenv("GOOGLE_API_KEY", "").strip():
         raise RuntimeError(
-            "Configura OPENAI_API_KEY en el entorno para ejecutar el juez Ragas."
+            "Configura GOOGLE_API_KEY en el entorno para ejecutar el juez Ragas."
         )
 
     datos = cargar_dataset(DATASET_PATH)
     registros = recolectar_evidencia(datos, ChatRAG())
     conjunto = Dataset.from_list(registros)
-    juez = ChatOpenAI(
-        model=os.getenv("RAGAS_LLM_MODEL", "gpt-4o-mini"),
+    juez = ChatGoogleGenerativeAI(
+        model=os.getenv("RAGAS_LLM_MODEL", "gemini-3.8-flash"),
         temperature=0,
+        max_retries=0,
+        timeout=60,
     )
-    embeddings = OpenAIEmbeddings(
-        model=os.getenv("RAGAS_EMBEDDING_MODEL", "text-embedding-3-small")
+    embeddings = LangchainEmbeddingsWrapper(
+        GoogleGenerativeAIEmbeddings(
+            model=os.getenv(
+                "RAGAS_EMBEDDING_MODEL", "models/gemini-embedding-001"
+            )
+        )
     )
-    resultado = evaluate(
-        conjunto,
-        metrics=[
-            faithfulness,
-            answer_relevancy,
-            context_precision,
-            context_recall,
-        ],
-        llm=juez,
-        embeddings=embeddings,
-        run_config=RunConfig(timeout=60, max_retries=0, max_workers=4),
-        raise_exceptions=True,
-    )
+    juez_ragas = LangchainLLMWrapper(juez)
+    puntajes_anteriores = [
+        faithfulness.llm,
+        answer_relevancy.llm,
+        context_precision.llm,
+        context_recall.llm,
+    ]
+    for metrica in (
+        faithfulness,
+        answer_relevancy,
+        context_precision,
+        context_recall,
+    ):
+        metrica.llm = juez_ragas
+    faithfulness.strictness = 1
+    try:
+        resultado = evaluate(
+            conjunto,
+            metrics=[
+                faithfulness,
+                answer_relevancy,
+                context_precision,
+                context_recall,
+            ],
+            llm=juez_ragas,
+            embeddings=embeddings,
+            run_config=RunConfig(timeout=90, max_retries=0, max_workers=1),
+            raise_exceptions=True,
+        )
+    finally:
+        for metrica, llm_anterior in zip(
+            (
+                faithfulness,
+                answer_relevancy,
+                context_precision,
+                context_recall,
+            ),
+            puntajes_anteriores,
+        ):
+            metrica.llm = llm_anterior
 
     if len(resultado.scores) != len(registros):
         raise RuntimeError(
