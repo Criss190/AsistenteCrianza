@@ -20,7 +20,7 @@ from src.prompt_builder import build_prompt
 BASE_CONOCIMIENTO_DIR = (
     Path(__file__).resolve().parent.parent / "docs" / "base_conocimiento"
 )
-MODELO_GROQ_PREDETERMINADO = "llama-3.3-70b-versatile"
+MODELO_GROQ_PREDETERMINADO = "openai/gpt-oss-120b"
 MENSAJE_SIN_EVIDENCIA = (
     "No dispongo de esa información en la base de conocimientos. "
     "Puedes reformular la pregunta o consultar a un profesional relacionado."
@@ -49,10 +49,19 @@ class ChatRAG:
         self,
         directorio_conocimiento: str | Path = BASE_CONOCIMIENTO_DIR,
         directorio_vectorstore: str | Path | None = None,
+        chunk_size: int = 500,
+        chunk_overlap: int = 50,
+        top_k: int = 3,
     ) -> None:
+        if top_k <= 0:
+            raise ValueError("top_k debe ser mayor que cero.")
         self.base_conocimiento = BaseConocimientoLocal.cargar(
-            directorio_conocimiento, directorio_vectorstore
+            directorio_conocimiento,
+            directorio_vectorstore,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
         )
+        self.top_k = top_k
         self.api_key = os.getenv("GROQ_API_KEY", "").strip()
         self.modelo = os.getenv("GROQ_MODEL", MODELO_GROQ_PREDETERMINADO).strip()
 
@@ -71,7 +80,7 @@ class ChatRAG:
         """Responde con evidencia recuperada, absteniéndose cuando no la hay."""
         historial_seguro = self._limpiar_historial(historial or [])
         consulta = self._consulta_con_historial(mensaje, historial_seguro)
-        fragmentos = self.base_conocimiento.buscar(consulta, limite=3)
+        fragmentos = self.base_conocimiento.buscar(consulta, limite=self.top_k)
         fuentes = self._formatear_fuentes(fragmentos)
         contextos = [fragmento.texto for fragmento in fragmentos]
 

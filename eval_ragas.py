@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from datasets import Dataset
+from dotenv import load_dotenv
 from langchain_google_genai import (
     ChatGoogleGenerativeAI,
     GoogleGenerativeAIEmbeddings,
@@ -29,16 +30,33 @@ from src.rag_chat import ChatRAG
 
 
 ROOT = Path(__file__).resolve().parent
+load_dotenv(ROOT / ".env")
 DATASET_PATH = Path(
     os.getenv("RAGAS_EVAL_DATASET", str(ROOT / "eval_dataset.json"))
 )
-RESULTS_PATH = ROOT / "ragas_results.json"
+RESULTS_PATH = Path(
+    os.getenv("RAGAS_RESULTS_PATH", str(ROOT / "ragas_results.json"))
+).resolve()
 METRIC_NAMES = (
     "faithfulness",
     "answer_relevancy",
     "context_precision",
     "context_recall",
 )
+
+
+def _entero_entorno(nombre: str, predeterminado: int, minimo: int) -> int:
+    """Carga un parámetro entero opcional y valida el rango."""
+    valor = os.getenv(nombre)
+    if valor is None:
+        return predeterminado
+    try:
+        entero = int(valor)
+    except ValueError as error:
+        raise ValueError(f"{nombre} debe ser un número entero.") from error
+    if entero < minimo:
+        raise ValueError(f"{nombre} debe ser mayor o igual que {minimo}.")
+    return entero
 
 
 def _clasificar_dominio(fila: dict[str, str]) -> str:
@@ -94,6 +112,8 @@ def recolectar_evidencia(
                 "contexts": resultado["contexts"],
                 "answer": resultado["answer"],
                 "ground_truth": fila["ground_truth"],
+                "domain": _clasificar_dominio(fila),
+                "mode": resultado["mode"],
             }
         )
     return evaluacion
@@ -107,8 +127,34 @@ def main() -> None:
         )
 
     datos = cargar_dataset(DATASET_PATH)
-    registros = recolectar_evidencia(datos, ChatRAG())
-    conjunto = Dataset.from_list(registros)
+    chunk_size = _entero_entorno("RAG_CHUNK_SIZE", 500, 1)
+    chunk_overlap = _entero_entorno("RAG_CHUNK_OVERLAP", 50, 0)
+    top_k = _entero_entorno("RAG_TOP_K", 3, 1)
+    if chunk_overlap >= chunk_size:
+        raise ValueError("RAG_CHUNK_OVERLAP debe ser menor que RAG_CHUNK_SIZE.")
+    registros = recolectar_evidencia(
+        datos,
+        ChatRAG(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            top_k=top_k,
+        ),
+    )
+    registros_en_dominio = [
+        registro for registro in registros if registro["domain"] == "in_domain"
+    ]
+    registros_fuera_dominio = [
+        registro for registro in registros if registro["domain"] == "out_of_domain"
+    ]
+    conjunto = Dataset.from_list(
+        [
+            {
+                campo: registro[campo]
+                for campo in ("question", "contexts", "answer", "ground_truth")
+            }
+            for registro in registros_en_dominio
+        ]
+    )
     juez = ChatGoogleGenerativeAI(
         model=os.getenv("RAGAS_LLM_MODEL", "gemini-3.8-flash"),
         temperature=0,
@@ -129,6 +175,7 @@ def main() -> None:
         context_precision.llm,
         context_recall.llm,
     ]
+    strictness_anterior = faithfulness.strictness
     for metrica in (
         faithfulness,
         answer_relevancy,
@@ -162,22 +209,24 @@ def main() -> None:
             puntajes_anteriores,
         ):
             metrica.llm = llm_anterior
+        faithfulness.strictness = strictness_anterior
 
-    if len(resultado.scores) != len(registros):
+    if len(resultado.scores) != len(registros_en_dominio):
         raise RuntimeError(
             "Ragas no produjo una puntuación para cada pregunta; "
             "revisa las credenciales, cuota y compatibilidad del entorno."
         )
+    puntuaciones_por_pregunta = {
+        registro["question"]: puntuaciones
+        for registro, puntuaciones in zip(registros_en_dominio, resultado.scores)
+    }
     tabla = pd.DataFrame(
         [
             {
                 **registro,
-                **puntuaciones,
-                "domain": _clasificar_dominio(fila),
+                **puntuaciones_por_pregunta.get(registro["question"], {}),
             }
-            for fila, registro, puntuaciones in zip(
-                datos, registros, resultado.scores
-            )
+            for registro in registros
         ]
     )
     for metrica in METRIC_NAMES:
@@ -187,12 +236,31 @@ def main() -> None:
     resumen = tabla[list(METRIC_NAMES)].mean(numeric_only=True)
     print("\nPromedio de métricas Ragas:")
     print(resumen.to_frame("score").to_string())
+    abstenciones_correctas = sum(
+        registro["mode"] == "no_evidence" for registro in registros_fuera_dominio
+    )
+    tasa_abstencion = (
+        abstenciones_correctas / len(registros_fuera_dominio)
+        if registros_fuera_dominio
+        else float("nan")
+    )
+    print(
+        "\nControl fuera de dominio: "
+        f"{abstenciones_correctas}/{len(registros_fuera_dominio)} "
+        f"abstenciones correctas ({tasa_abstencion:.1%})"
+    )
 
     filas_salida = []
     for fila in tabla.to_dict(orient="records"):
         salida = {
             "question": fila["question"],
             "domain": fila["domain"],
+            "mode": fila["mode"],
+            "correct_abstention": (
+                fila["mode"] == "no_evidence"
+                if fila["domain"] == "out_of_domain"
+                else None
+            ),
         }
         for metrica in METRIC_NAMES:
             valor = fila.get(metrica)
@@ -202,9 +270,24 @@ def main() -> None:
                 else None
             )
         filas_salida.append(salida)
+    RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
     RESULTS_PATH.write_text(
         json.dumps(
             {
+                "pipeline": {
+                    "chunk_size": chunk_size,
+                    "chunk_overlap": chunk_overlap,
+                    "top_k": top_k,
+                    "embedding_model": (
+                        "sentence-transformers/all-MiniLM-L6-v2"
+                    ),
+                },
+                "evaluation": {
+                    "in_domain_count": len(registros_en_dominio),
+                    "out_of_domain_count": len(registros_fuera_dominio),
+                    "correct_abstentions": abstenciones_correctas,
+                    "out_of_domain_abstention_rate": tasa_abstencion,
+                },
                 "metrics": {
                     metrica: (
                         float(resumen[metrica])

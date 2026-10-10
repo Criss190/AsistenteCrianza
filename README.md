@@ -1,47 +1,143 @@
 # CrianzApp — Crianza con calma
 
-Chat web de orientación general sobre crianza positiva y responsable. Recupera evidencia de documentos locales PDF, DOCX, Markdown y texto; si se configura `GROQ_API_KEY`, usa Groq para redactar respuestas conversacionales basadas en esos fragmentos. Está preparado para ejecutarse localmente o desplegarse en Render.
+Asistente web de orientación general sobre crianza positiva. El sistema
+recupera fragmentos de documentos locales, presenta las fuentes y, si se
+configura `GROQ_API_KEY`, usa Groq para redactar una respuesta conversacional
+restringida a esa evidencia.
 
-## Cómo funciona el RAG
+## Flujo RAG implementado
 
-1. **Carga y fragmentación:** al iniciar, `knowledge_base.py` admite `.pdf`, `.docx`, `.txt` y `.md`; usa `RecursiveCharacterTextSplitter` con fragmentos de 500 caracteres y solapamiento de 50.
-2. **Indexación y recuperación:** ChromaDB persiste los embeddings y metadatos en `vectorstore/`; el retriever usa similitud semántica y devuelve hasta tres fragmentos.
-3. **Aumento:** `build_prompt()` combina evidencia delimitada, historial conversacional, ejemplos few-shot y las instrucciones responsables del Avance 1.
-4. **Generación:** con `GROQ_API_KEY`, Groq redacta y valida la respuesta estructurada. Sin clave o cuando el servicio falla, el chat muestra directamente la evidencia recuperada.
-5. **Abstención y seguridad:** sin evidencia suficiente se indica expresamente que la información no está disponible en la base. Las señales de violencia, abuso o autolesión reciben orientación prioritaria y canales de ayuda.
+```mermaid
+flowchart LR
+    A["Corpus seleccionado<br/>docs/base_conocimiento/"] --> B["Extracción<br/>PDF · DOCX · TXT · MD · HTML"]
+    B --> C["Fragmentación recursiva<br/>500 caracteres · 50 solapados"]
+    C --> D["Embeddings locales<br/>all-MiniLM-L6-v2"]
+    D --> E[("ChromaDB persistente<br/>vectorstore/")]
+    F["Pregunta + historial<br/>máx. 8 turnos"] --> G["Normalización de seguimiento<br/>últimas 2 preguntas"]
+    G --> H["Búsqueda coseno + filtro<br/>top_k=3 · distancia ≤ 0.65"]
+    E --> H
+    H --> I{"¿Hay evidencia?"}
+    I -- No --> J["Abstención explícita"]
+    I -- Sí --> K["System Prompt + Few-Shot<br/>delimitadores + evidencia"]
+    K --> L["Groq opcional<br/>JSON validado"]
+    L --> M["Respuesta + fuentes<br/>fragmento, archivo, página/sección"]
+    J --> M
+```
 
-La interfaz muestra las fuentes consultadas y distingue respuesta generativa, respuesta local y orientación de seguridad. El historial se conserva solo en la pestaña durante la conversación.
+El diseño, decisiones, limitaciones, plan de evaluación y estado de despliegue
+se explican en [docs/flujo_completo_rag.md](docs/flujo_completo_rag.md). El
+diagrama también está disponible en [docs/diagrama_flujo_rag.svg](docs/diagrama_flujo_rag.svg).
+El PDF de entrega, cuando se genere con resultados y capturas verificables,
+debe enlazarse aquí; no se publican métricas ni capturas inventadas.
 
-## Ejecutar localmente
+### Corpus
 
-Requiere Python 3.12 o posterior.
+El índice recorre `docs/base_conocimiento/` y procesa los documentos
+compatibles. El corpus versionado actual contiene los tres materiales de
+participante TBRI (Conexión, Corrección y Empoderamiento), el artículo de
+Gómez Muzzio sobre psicoterapia y apego, la revisión sistemática de
+intervenciones digitales de crianza y `guia_crianza.md`. Se seleccionaron
+porque cubren apego, interacción cuidador-niño, corregulación, disciplina y
+apoyo parental, directamente pertinentes a la orientación del asistente.
+El notebook `flujo_rag_groq.ipynb` es material de implementación, no fuente
+de conocimiento, y no se vectoriza.
 
-1. Usa Python 3.12.8 (versión fijada en `.python-version`) e instala dependencias: `python -m pip install -r requirements.txt`.
-2. (Opcional) Configura `GROQ_API_KEY` y `GROQ_MODEL` en las variables de entorno para generación con Groq. Las claves no se deben subir al repositorio.
-3. Inicia la aplicación: `python main.py`.
-4. Abre `http://localhost:5000`.
+Los formatos aceptados son PDF, DOCX, TXT, Markdown y HTML (`.html`/`.htm`).
+PDF usa metadatos de página; DOCX/Markdown/HTML/TXT usan sección o nombre de
+archivo. El splitter es `RecursiveCharacterTextSplitter` de 500 caracteres,
+solapamiento de 50 y separadores por párrafo, salto de línea, espacio y
+carácter. Chroma persiste los textos, metadatos e índices en `vectorstore/`.
+El embedding explícito es `sentence-transformers/all-MiniLM-L6-v2`, ejecutado
+localmente por la función predeterminada de Chroma. El criterio cosine y la
+huella de corpus/configuración permiten reindexar si cambia el corpus o el
+chunking.
 
-Sin `GROQ_API_KEY`, el chat sigue disponible en modo local extractivo. Copia `.env.example` como `.env` para completar tus claves localmente. El archivo `.env` no se carga automáticamente; configura las variables en tu entorno antes de iniciar la aplicación.
+La búsqueda obtiene candidatos por similitud coseno; se conservan hasta tres
+fragmentos que cumplan distancia máxima 0.65 y un solapamiento léxico mínimo
+con la consulta. En seguimientos, se añaden las dos preguntas anteriores a la
+consulta de recuperación. El modelo recibe hasta ocho turnos en el prompt.
+Sin evidencia aceptable, la respuesta es: “No dispongo de esa información en
+la base de conocimientos”.
 
-Para ejecutar la evaluación dentro del entorno Python 3.12.8, configura `GOOGLE_API_KEY` en `.env` y ejecuta desde la raíz `./.venv312/bin/python -m dotenv run -- ./.venv312/bin/python eval_ragas.py`. El script usa Gemini para puntuar preguntas y fragmentos recuperados y crea `ragas_results.json`. Puedes cambiar el modelo con `RAGAS_LLM_MODEL`; el valor predeterminado es `gemini-3.8-flash`. El dataset con 15 preguntas está en `eval_dataset.json`.
+## Instalación y ejecución
 
-## Desplegar en Render
+Requiere Python 3.12.8, fijado en `.python-version`.
 
-1. Sube este repositorio a GitHub.
-2. En Render, selecciona **New → Blueprint** y conecta el repositorio. Render usará `render.yaml`.
-3. Añade el valor secreto de `GROQ_API_KEY` cuando Render lo solicite. `GROQ_MODEL` ya tiene un valor por defecto y se puede cambiar en la configuración del servicio.
-4. Despliega y verifica `/api/health`.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env
+python main.py
+```
 
-También se puede crear un **Web Service** manual con entorno Python, build command `pip install -r requirements.txt` y start command `gunicorn main:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120`.
+Completa localmente `GROQ_API_KEY` para habilitar generación con Groq.
+`GOOGLE_API_KEY` solo se requiere para ejecutar Ragas. `.env` está ignorado por
+Git y se carga desde la raíz; nunca incluyas claves en commits o capturas.
+Sin clave de Groq, el backend devuelve los fragmentos relevantes en modo
+extractivo. Abre `http://localhost:5000`.
 
-## API
+### API
 
-- `GET /` — interfaz del chat.
-- `GET /api/health` — estado del servicio, fragmentos disponibles y si Groq está configurado (nunca expone la clave).
-- `POST /chat` (alias compatible: `/api/chat`) — recibe JSON con `message` y `history`; devuelve `respuesta` y `fuentes` junto con los alias `answer` y `sources`, además de `mode` y `notice`.
+- `GET /`: interfaz de conversación.
+- `GET /api/health`: disponibilidad, cantidad de chunks y estado del LLM; no
+  devuelve secretos.
+- `POST /chat` y alias `POST /api/chat`: JSON `{ "message": "...",
+  "history": [{"role": "user|assistant", "content": "..."}] }`; devuelve
+  `respuesta`, `fuentes`, `mode` y `notice`, además de alias en inglés.
+- Las fuentes tienen archivo, extracto, `chunk_id` y página/sección disponible.
 
-## Contenido y alcance
+## Evaluación Ragas
 
-Amplía la base añadiendo archivos PDF, DOCX, Markdown o texto a `docs/base_conocimiento/`; al cambiar su contenido, el índice Chroma se reconstruye al iniciar. En despliegues con disco efímero el índice también es efímero y se vuelve a crear durante el arranque.
+`eval_dataset.json` contiene 15 preguntas: 12 en dominio y 3 fuera de dominio,
+con `ground_truth`. Las cuatro métricas Ragas se calculan solo para las
+preguntas en dominio, donde la referencia representa contenido recuperable.
+Para las preguntas fuera de dominio se reporta por separado la tasa de
+abstención correcta; `context_recall` no es una medida válida para una
+referencia que explícitamente dice que el dato no está en el corpus.
 
-CrianzApp ofrece orientación general: no diagnostica ni reemplaza a psicología, pediatría o servicios de protección infantil. Ante indicios de abuso o riesgo, prioriza ayuda humana; en Colombia, ICBF línea 141 y emergencias 123. Evita compartir información que identifique a niños o niñas. Cuando Groq está habilitado, el mensaje y los fragmentos recuperados se envían a ese proveedor para generar la respuesta.
+```bash
+GOOGLE_API_KEY=... python eval_ragas.py
+```
+
+El script carga `.env`, usa Gemini configurado en `RAGAS_LLM_MODEL` y
+`RAGAS_EMBEDDING_MODEL`, imprime promedios y guarda `ragas_results.json`.
+La clave y el endpoint de Google deben tener cuota y acceso a ambos modelos.
+No se deben informar resultados hasta que el proceso termine y guarde el JSON.
+
+Para reproducir una iteración y guardar sus resultados aparte:
+
+```bash
+RAG_CHUNK_SIZE=500 RAG_CHUNK_OVERLAP=50 RAG_TOP_K=3 \
+RAGAS_RESULTS_PATH=ragas_baseline.json python eval_ragas.py
+
+RAG_CHUNK_SIZE=500 RAG_CHUNK_OVERLAP=50 RAG_TOP_K=4 \
+RAGAS_RESULTS_PATH=ragas_topk4.json python eval_ragas.py
+```
+
+El índice se reconstruye al detectar cambios en el corpus o configuración de
+fragmentación. Compara los promedios de los cuatro scores y la tasa de
+abstención; adopta el cambio solo si mejora las métricas pertinentes sin
+degradar la abstención. Estos comandos describen el protocolo, no resultados
+ya medidos.
+
+## Despliegue
+
+El blueprint de Render está en `render.yaml`. Conecta el repositorio como
+Blueprint y configura `GROQ_API_KEY` como secreto; `GROQ_MODEL` tiene un valor
+predeterminado. El comando de inicio es Gunicorn con un worker y crea el
+índice al arrancar. El almacenamiento del plan gratuito puede ser efímero,
+por lo que el índice se reconstruye en cada despliegue.
+
+- Repositorio: [github.com/Criss190/AsistenteCrianza](https://github.com/Criss190/AsistenteCrianza)
+- URL pública: pendiente de verificar. La dirección probada
+  `https://crianzapp.onrender.com` respondió HTTP 404; no debe presentarse
+  como despliegue funcional hasta confirmar la URL generada por Render.
+
+## Alcance y seguridad
+
+El asistente brinda información general; no diagnostica ni reemplaza atención
+profesional. Señales de abuso, violencia o autolesión tienen una respuesta de
+seguridad prioritaria. En Colombia se informa la línea ICBF 141 y emergencias
+123. Al habilitar Groq, la pregunta, historial y fragmentos recuperados se
+envían a ese proveedor. No incluyas datos identificables de niños o niñas.

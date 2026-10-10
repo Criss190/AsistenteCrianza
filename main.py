@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 """Aplicación web CrianzApp: chat RAG con conocimiento local y Groq opcional."""
 
+from pathlib import Path
+
+from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, render_template, request
 
 from src.rag_chat import ChatRAG
 
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024

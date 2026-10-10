@@ -1,6 +1,13 @@
+import os
 import unittest
+from unittest.mock import patch
 
-from eval_ragas import _clasificar_dominio, cargar_dataset, DATASET_PATH
+from eval_ragas import (
+    _clasificar_dominio,
+    _entero_entorno,
+    cargar_dataset,
+    DATASET_PATH,
+)
 
 
 class EvaluationDatasetTests(unittest.TestCase):
@@ -18,6 +25,12 @@ class EvaluationDatasetTests(unittest.TestCase):
         }
 
         self.assertEqual(_clasificar_dominio(fila), "out_of_domain")
+
+    def test_integer_pipeline_parameters_validate_ranges(self):
+        self.assertEqual(_entero_entorno("NO_EXISTE", 500, 1), 500)
+        with patch.dict(os.environ, {"INVALIDO": "no-es-entero"}):
+            with self.assertRaises(ValueError):
+                _entero_entorno("INVALIDO", 500, 1)
 
 
 if __name__ == "__main__":

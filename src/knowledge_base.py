@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+from html.parser import HTMLParser
 from pathlib import Path
 import re
 import unicodedata
@@ -11,16 +12,24 @@ from typing import Any
 
 import chromadb
 from chromadb.config import Settings
+from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
 from docx import Document as WordDocument
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 
 
-EXTENSIONES_ADMITIDAS = {".pdf", ".docx", ".txt", ".md"}
+EXTENSIONES_ADMITIDAS = {".pdf", ".docx", ".txt", ".md", ".html", ".htm"}
 TAMANO_FRAGMENTO = 500
 SOLAPAMIENTO_FRAGMENTO = 50
 DISTANCIA_MAXIMA = 0.65
 NOMBRE_COLECCION = "crianzapp_conocimiento"
+MODELO_EMBEDDINGS = "sentence-transformers/all-MiniLM-L6-v2"
+TAGS_BLOQUE_HTML = {
+    "article", "blockquote", "br", "dd", "div", "dl", "dt", "figcaption",
+    "h1", "h2", "h3", "h4", "h5", "h6", "li", "ol", "p", "section", "td",
+    "th", "tr", "ul",
+}
+TAGS_IGNORADOS_HTML = {"head", "script", "style", "noscript", "svg"}
 PALABRAS_VACIAS = {
     "a", "al", "algo", "cada", "como", "con", "cual", "cuale", "cuando",
     "colombia", "de", "del",
@@ -71,6 +80,65 @@ class FragmentoConocimiento:
     distancia: float = 0.0
 
 
+class _ExtractorHTML(HTMLParser):
+    """Extrae texto visible de HTML y conserva encabezados como secciones."""
+
+    def __init__(self, titulo_inicial: str) -> None:
+        super().__init__(convert_charrefs=True)
+        self.titulo = titulo_inicial
+        self.partes: list[str] = []
+        self.secciones: list[tuple[str, str]] = []
+        self._ignorar = 0
+        self._capturando_encabezado = False
+        self._encabezado: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in TAGS_IGNORADOS_HTML:
+            self._ignorar += 1
+        if self._ignorar:
+            return
+        if tag in TAGS_BLOQUE_HTML:
+            self.partes.append("\n")
+        if re.fullmatch(r"h[1-6]", tag):
+            self._capturando_encabezado = True
+            self._encabezado = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in TAGS_IGNORADOS_HTML and self._ignorar:
+            self._ignorar -= 1
+        if self._ignorar:
+            return
+        if re.fullmatch(r"h[1-6]", tag) and self._encabezado:
+            self._guardar_seccion()
+            self.titulo = " ".join("".join(self._encabezado).split())
+            self._encabezado = []
+            self._capturando_encabezado = False
+        if tag in TAGS_BLOQUE_HTML:
+            self.partes.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if self._ignorar:
+            return
+        if self._capturando_encabezado:
+            self._encabezado.append(data)
+            return
+        self.partes.append(data)
+
+    def _guardar_seccion(self) -> None:
+        texto = re.sub(r"\s+", " ", "".join(self.partes)).strip()
+        if texto:
+            self.secciones.append((texto, {"section": self.titulo}))
+        self.partes = []
+
+
+def _leer_html(archivo: Path) -> list[tuple[str, dict[str, Any]]]:
+    """Extrae texto visible de HTML y asigna encabezados como metadatos."""
+    extractor = _ExtractorHTML(archivo.stem)
+    extractor.feed(archivo.read_text(encoding="utf-8"))
+    extractor._guardar_seccion()
+    return extractor.secciones
+
+
 def _leer_texto(archivo: Path) -> list[tuple[str, dict[str, Any]]]:
     """Extrae texto y metadatos de ubicación de los formatos admitidos."""
     extension = archivo.suffix.lower()
@@ -108,6 +176,9 @@ def _leer_texto(archivo: Path) -> list[tuple[str, dict[str, Any]]]:
                 ("\n".join(filas_tablas), {"section": f"{titulo} (tablas)"})
             )
         return secciones
+
+    if extension in {".html", ".htm"}:
+        return _leer_html(archivo)
 
     texto = archivo.read_text(encoding="utf-8")
     if extension == ".md":
@@ -150,8 +221,15 @@ class BaseConocimientoLocal:
         cls,
         directorio: str | Path,
         directorio_vectorstore: str | Path | None = None,
+        chunk_size: int = TAMANO_FRAGMENTO,
+        chunk_overlap: int = SOLAPAMIENTO_FRAGMENTO,
     ) -> "BaseConocimientoLocal":
         """Carga documentos y crea o actualiza el índice vectorial persistente."""
+        if chunk_size <= 0 or chunk_overlap < 0 or chunk_overlap >= chunk_size:
+            raise ValueError(
+                "chunk_size debe ser positivo y chunk_overlap estar entre "
+                "cero y chunk_size - 1."
+            )
         ruta = Path(directorio).resolve()
         ruta_vectorstore = (
             Path(directorio_vectorstore).resolve()
@@ -159,13 +237,16 @@ class BaseConocimientoLocal:
             else ruta.parent.parent / "vectorstore"
         )
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=TAMANO_FRAGMENTO,
-            chunk_overlap=SOLAPAMIENTO_FRAGMENTO,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
             add_start_index=True,
         )
 
         documentos: list[dict[str, Any]] = []
         contenido_hash = hashlib.sha256()
+        contenido_hash.update(
+            f"{chunk_size}:{chunk_overlap}:{MODELO_EMBEDDINGS}".encode("utf-8")
+        )
         archivos = sorted(
             archivo
             for archivo in ruta.rglob("*")
@@ -208,9 +289,17 @@ class BaseConocimientoLocal:
             path=str(ruta_vectorstore),
             settings=Settings(anonymized_telemetry=False),
         )
+        embedding_function = DefaultEmbeddingFunction()
         coleccion = cliente.get_or_create_collection(
             name=NOMBRE_COLECCION,
-            metadata={"hnsw:space": "cosine", "corpus_hash": huella_corpus},
+            embedding_function=embedding_function,
+            metadata={
+                "hnsw:space": "cosine",
+                "corpus_hash": huella_corpus,
+                "embedding_model": MODELO_EMBEDDINGS,
+                "chunk_size": chunk_size,
+                "chunk_overlap": chunk_overlap,
+            },
         )
 
         if coleccion.metadata.get("corpus_hash") != huella_corpus or (
@@ -219,7 +308,14 @@ class BaseConocimientoLocal:
             cliente.delete_collection(NOMBRE_COLECCION)
             coleccion = cliente.create_collection(
                 name=NOMBRE_COLECCION,
-                metadata={"hnsw:space": "cosine", "corpus_hash": huella_corpus},
+                embedding_function=embedding_function,
+                metadata={
+                    "hnsw:space": "cosine",
+                    "corpus_hash": huella_corpus,
+                    "embedding_model": MODELO_EMBEDDINGS,
+                    "chunk_size": chunk_size,
+                    "chunk_overlap": chunk_overlap,
+                },
             )
             if documentos:
                 coleccion.add(
