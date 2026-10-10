@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Aplicación web CrianzApp: chat RAG con conocimiento local y Groq opcional."""
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request
 
 from src.rag_chat import ChatRAG
 
@@ -12,20 +12,21 @@ chat_rag = ChatRAG()
 
 
 @app.get("/")
-def inicio():
+def inicio() -> str:
     """Sirve la interfaz web del asistente."""
     return render_template("index.html")
 
 
 @app.get("/api/health")
-def health():
+def health() -> Response:
     """Estado mínimo para comprobaciones de disponibilidad de Render."""
     return jsonify(chat_rag.estado())
 
 
+@app.post("/chat")
 @app.post("/api/chat")
-def chat():
-    """Recibe un mensaje, recupera evidencia y devuelve respuesta y fuentes."""
+def chat() -> Response | tuple[Response, int]:
+    """Recibe mensaje e historial y devuelve respuesta y fuentes citadas."""
     datos = request.get_json(silent=True)
     if not isinstance(datos, dict):
         return jsonify(error="Envía los datos del chat como JSON."), 400
@@ -37,8 +38,13 @@ def chat():
         return jsonify(error="El mensaje debe tener 2.000 caracteres o menos."), 400
 
     historial = datos.get("history", [])
-    if not isinstance(historial, list):
-        historial = []
+    if not isinstance(historial, list) or any(
+        not isinstance(turno, dict)
+        or turno.get("role") not in {"user", "assistant"}
+        or not isinstance(turno.get("content"), str)
+        for turno in historial
+    ):
+        return jsonify(error="El historial debe contener turnos válidos."), 400
 
     try:
         resultado = chat_rag.responder(mensaje.strip(), historial=historial)
@@ -48,7 +54,14 @@ def chat():
             error="Ocurrió un problema al procesar tu consulta. Inténtalo de nuevo."
         ), 500
 
-    return jsonify(resultado)
+    return jsonify(
+        respuesta=resultado["respuesta"],
+        fuentes=resultado["fuentes"],
+        answer=resultado["answer"],
+        sources=resultado["sources"],
+        mode=resultado["mode"],
+        notice=resultado["notice"],
+    )
 
 
 if __name__ == "__main__":

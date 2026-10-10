@@ -23,15 +23,40 @@ class ChatAppTests(unittest.TestCase):
 
     def test_rag_returns_local_evidence_and_sources(self):
         response = self.client.post(
-            "/api/chat",
+            "/chat",
             json={"message": "Mi hijo hace rabietas cuando apago la television"},
         )
 
         data = response.get_json()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(data["mode"], "local")
+        self.assertEqual(data["respuesta"], data["answer"])
+        self.assertEqual(data["fuentes"], data["sources"])
         self.assertTrue(data["sources"])
         self.assertIn("rabietas", data["answer"].lower())
+        self.assertTrue(data["sources"][0]["chunk_id"])
+        self.assertTrue(data["sources"][0]["excerpt"])
+
+    def test_chat_accepts_and_uses_conversation_history(self):
+        response = self.client.post(
+            "/chat",
+            json={
+                "message": "¿Y qué le puedo ofrecer después?",
+                "history": [
+                    {
+                        "role": "user",
+                        "content": "Mi hijo hace rabietas cuando apago la televisión",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "Anticipa el límite y valida su emoción.",
+                    },
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["fuentes"])
 
     def test_unknown_topic_abstains(self):
         response = self.client.post(
@@ -55,6 +80,14 @@ class ChatAppTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("error", response.get_json())
+
+    def test_invalid_history_is_rejected(self):
+        response = self.client.post(
+            "/chat",
+            json={"message": "¿Qué hago?", "history": [{"role": "system"}]},
+        )
+
+        self.assertEqual(response.status_code, 400)
 
 
 if __name__ == "__main__":

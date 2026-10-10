@@ -1,0 +1,62 @@
+[
+  {
+    "question": "¿Cuáles son las tres reglas para las relaciones utilizadas en el grupo de cuidado según TBRI?",
+    "ground_truth": "Las tres reglas son: 1. Mantenerse juntos, 2. Sin lastimar (las heridas pueden ser internas o externas), y 3. Divertirse."
+  },
+  {
+    "question": "¿Qué significan las siglas de la Respuesta IDEAL en los Principios de Corrección de TBRI?",
+    "ground_truth": "Corresponden a: Inmediata (Immediate), Directa (Direct), Eficiente (Efficient), Basada en acciones (Action-based) y Enfocada al comportamiento, no al niño (Leveled at the behavior, not the child)."
+  },
+  {
+    "question": "¿Cuáles son los cuatro Niveles de Respuesta de TBRI frente a un comportamiento desafiante?",
+    "ground_truth": "Nivel 1: Interacción divertida, Nivel 2: Interacción estructurada, Nivel 3: Interacción para calmar, y Nivel 4: Interacción para proteger."
+  },
+  {
+    "question": "¿Qué funciones cumplen los sentidos según el documento de Principios de Empoderamiento de TBRI?",
+    "ground_truth": "Cumplen cuatro funciones principales: alertar al cuerpo y al cerebro sobre pistas importantes, proteger al cuerpo y al cerebro para no abrumarse, seleccionar qué es importante prestar atención, y organizar el cerebro y el comportamiento."
+  },
+  {
+    "question": "¿Qué son los sentidos internos descritos en TBRI y en qué consisten?",
+    "ground_truth": "Son tres: el sentido vestibular (controlado por el fluido del oído interno, indica la posición respecto a la tierra), el sentido propioceptivo (registra la presión profunda y ayuda a organizar músculos y articulaciones) y el sentido táctil (sensible a la presión del contacto)."
+  },
+  {
+    "question": "¿Por qué es tan importante la hidratación y el control de la glucemia cada dos horas en niños con antecedentes difíciles?",
+    "ground_truth": "Porque la deshidratación y la baja glucosa alteran el cerebro, causando problemas de concentración, ansiedad, irritabilidad, agresión y falta de autorregulación. Mantenerlos hidratados y alimentados previene desregulaciones."
+  },
+  {
+    "question": "¿Qué conductas presentan los bebés con un estilo de apego evitativo según Bowlby/TBRI?",
+    "ground_truth": "Aprenden a no llorar para que se cubran sus necesidades, no muestran llanto explícito cuando el cuidador se va y suelen mantenerse cerrados o centrados en objetos."
+  },
+  {
+    "question": "¿Cuáles son las tres estrategias para relacionarse que se trabajan en los Principios de Conexión de TBRI?",
+    "ground_truth": "Incluyen el contacto saludable, el contacto visual, la calidad de la voz (tono, volumen, cadencia), el emparejamiento comportamental y la interacción divertida."
+  },
+  {
+    "question": "Según el artículo de Gómez Muzzio et al. (2008), ¿qué es la sensibilidad parental según Ainsworth?",
+    "ground_truth": "Es la habilidad de percibir las señales del niño correctamente, y reaccionar a estas señales de manera inmediata y adecuada."
+  },
+  {
+    "question": "¿Qué tres modalidades de psicoterapia basadas en evidencia se revisan en el artículo de Gómez Muzzio (2008)?",
+    "ground_truth": "Se revisan: 1. La Psicoterapia Infante-Cuidador (IPP), 2. La Terapias de Interacción Guiada (IG), y 3. La Terapia de Interacción Padre-Hijo (PCIT)."
+  },
+  {
+    "question": "Según la revisión sistemática de Lin-Lewry et al. (2024), ¿qué efectos tienen las intervenciones digitales en los padres durante el primer año postparto?",
+    "ground_truth": "Incrementan significativamente la autoeficacia parental y el apoyo social, al tiempo que reducen los síntomas depresivos entre las 6 semanas y los 3 meses postparto."
+  },
+  {
+    "question": "¿Qué moderadores o factores clave incrementaron la efectividad de las intervenciones digitales según Lin-Lewry et al. (2024)?",
+    "ground_truth": "Ofrecer la intervención por más de 6 semanas, incluir una orientación presencial (in-person orientation), contar con un currículo guiado y realizar la intervención en países miembros de la OCDE."
+  },
+  {
+    "question": "¿Cuál es la velocidad recomendada para la órbita de los satélites de baja altura alrededor de Marte?",
+    "ground_truth": "La información no se encuentra en la base de conocimientos."
+  },
+  {
+    "question": "¿Cuáles son las tasas actuales del impuesto a la renta para empresas en Colombia?",
+    "ground_truth": "La información no se encuentra en la base de conocimientos."
+  },
+  {
+    "question": "¿En qué año se firmó el tratado de paz de la Primera Guerra Mundial en Versalles?",
+    "ground_truth": "La información no se encuentra en la base de conocimientos."
+  }
+]

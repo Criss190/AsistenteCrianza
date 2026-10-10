@@ -1,14 +1,14 @@
 # CrianzApp — Crianza con calma
 
-Chat web de orientación general sobre crianza positiva y responsable. Recupera evidencia de la guía local en Markdown y, si se configura `GROQ_API_KEY`, usa Groq para redactar respuestas conversacionales basadas en esos fragmentos. Está preparado para ejecutarse localmente o desplegarse en Render.
+Chat web de orientación general sobre crianza positiva y responsable. Recupera evidencia de documentos locales PDF, DOCX, Markdown y texto; si se configura `GROQ_API_KEY`, usa Groq para redactar respuestas conversacionales basadas en esos fragmentos. Está preparado para ejecutarse localmente o desplegarse en Render.
 
 ## Cómo funciona el RAG
 
-1. **Carga:** lee los archivos `.md` y `.txt` de `docs/base_conocimiento/` al iniciar.
-2. **Recuperación:** `BaseConocimientoLocal.buscar()` selecciona hasta cuatro fragmentos por coincidencia léxica. No descarga modelos ni necesita una base vectorial, para mantener bajo el consumo de memoria de Render.
-3. **Aumento:** `build_prompt()` añade la pregunta, los fragmentos recuperados, los ejemplos few-shot y las instrucciones de crianza responsable.
-4. **Generación:** con una clave de Groq, genera y valida una respuesta estructurada. Sin clave o si Groq no está disponible, muestra directamente la evidencia local.
-5. **Seguridad:** consultas con señales de violencia, abuso o autolesión reciben orientación prioritaria y canales de ayuda, sin enviarse al LLM.
+1. **Carga y fragmentación:** al iniciar, `knowledge_base.py` admite `.pdf`, `.docx`, `.txt` y `.md`; usa `RecursiveCharacterTextSplitter` con fragmentos de 500 caracteres y solapamiento de 50.
+2. **Indexación y recuperación:** ChromaDB persiste los embeddings y metadatos en `vectorstore/`; el retriever usa similitud semántica y devuelve hasta tres fragmentos.
+3. **Aumento:** `build_prompt()` combina evidencia delimitada, historial conversacional, ejemplos few-shot y las instrucciones responsables del Avance 1.
+4. **Generación:** con `GROQ_API_KEY`, Groq redacta y valida la respuesta estructurada. Sin clave o cuando el servicio falla, el chat muestra directamente la evidencia recuperada.
+5. **Abstención y seguridad:** sin evidencia suficiente se indica expresamente que la información no está disponible en la base. Las señales de violencia, abuso o autolesión reciben orientación prioritaria y canales de ayuda.
 
 La interfaz muestra las fuentes consultadas y distingue respuesta generativa, respuesta local y orientación de seguridad. El historial se conserva solo en la pestaña durante la conversación.
 
@@ -16,12 +16,14 @@ La interfaz muestra las fuentes consultadas y distingue respuesta generativa, re
 
 Requiere Python 3.12 o posterior.
 
-1. Instala dependencias: `pip install -r requirements.txt`.
-2. (Opcional) Configura `GROQ_API_KEY` y `GROQ_MODEL` en las variables de entorno. La clave se obtiene en la consola de Groq; no se debe subir al repositorio.
+1. Usa Python 3.12.8 (versión fijada en `.python-version`) e instala dependencias: `python -m pip install -r requirements.txt`.
+2. (Opcional) Configura `GROQ_API_KEY` y `GROQ_MODEL` en las variables de entorno para generación con Groq. Las claves no se deben subir al repositorio.
 3. Inicia la aplicación: `python main.py`.
 4. Abre `http://localhost:5000`.
 
-Sin `GROQ_API_KEY`, el chat sigue disponible en modo local extractivo. El archivo `.env.example` documenta las variables de entorno, pero no se carga automáticamente.
+Sin `GROQ_API_KEY`, el chat sigue disponible en modo local extractivo. Copia `.env.example` como `.env` para completar tus claves localmente. El archivo `.env` no se carga automáticamente; configura las variables en tu entorno antes de iniciar la aplicación.
+
+Para ejecutar la evaluación dentro del entorno Python 3.12.8, ejecuta desde la raíz `./.venv312/bin/python -m dotenv run -- ./.venv312/bin/python eval_ragas.py`. El script carga `.env`, usa OpenAI para evaluar preguntas y fragmentos recuperados, y crea `ragas_results.json`. El dataset con 15 preguntas está en `eval_dataset.json`.
 
 ## Desplegar en Render
 
@@ -30,16 +32,16 @@ Sin `GROQ_API_KEY`, el chat sigue disponible en modo local extractivo. El archiv
 3. Añade el valor secreto de `GROQ_API_KEY` cuando Render lo solicite. `GROQ_MODEL` ya tiene un valor por defecto y se puede cambiar en la configuración del servicio.
 4. Despliega y verifica `/api/health`.
 
-También se puede crear un **Web Service** manual con entorno Python, build command `pip install -r requirements.txt` y start command `gunicorn main:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60`.
+También se puede crear un **Web Service** manual con entorno Python, build command `pip install -r requirements.txt` y start command `gunicorn main:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120`.
 
 ## API
 
 - `GET /` — interfaz del chat.
 - `GET /api/health` — estado del servicio, fragmentos disponibles y si Groq está configurado (nunca expone la clave).
-- `POST /api/chat` — recibe JSON con `message` y un `history` opcional; devuelve `answer`, `sources`, `mode` y `notice`.
+- `POST /chat` (alias compatible: `/api/chat`) — recibe JSON con `message` y `history`; devuelve `respuesta` y `fuentes` junto con los alias `answer` y `sources`, además de `mode` y `notice`.
 
 ## Contenido y alcance
 
-Amplía la base añadiendo archivos `.md` o `.txt` en `docs/base_conocimiento/`. La recuperación actual es léxica, no usa embeddings, ChromaDB ni búsqueda semántica. La notebook `docs/base_conocimiento/flujo_rag_groq.ipynb` conserva el ejemplo educativo de embeddings y ChromaDB; esta app web usa una arquitectura ligera más adecuada para el despliegue elegido.
+Amplía la base añadiendo archivos PDF, DOCX, Markdown o texto a `docs/base_conocimiento/`; al cambiar su contenido, el índice Chroma se reconstruye al iniciar. En despliegues con disco efímero el índice también es efímero y se vuelve a crear durante el arranque.
 
 CrianzApp ofrece orientación general: no diagnostica ni reemplaza a psicología, pediatría o servicios de protección infantil. Ante indicios de abuso o riesgo, prioriza ayuda humana; en Colombia, ICBF línea 141 y emergencias 123. Evita compartir información que identifique a niños o niñas. Cuando Groq está habilitado, el mensaje y los fragmentos recuperados se envían a ese proveedor para generar la respuesta.

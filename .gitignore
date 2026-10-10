@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv*/
 venv/
 .env
 .env.*
@@ -8,3 +9,5 @@ venv/
 instance/
 .pytest_cache/
 .coverage
+vectorstore/
+ragas_results.json

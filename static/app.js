@@ -76,19 +76,22 @@ function addAssistantMessage(result) {
   answer.textContent = result.answer || 'No pude generar una respuesta. Inténtalo de nuevo.';
   bubble.append(answer);
 
-  if (Array.isArray(result.sources) && result.sources.length > 0) {
+  const sources = result.fuentes || result.sources || [];
+  if (Array.isArray(sources) && sources.length > 0) {
     const details = document.createElement('details');
     details.className = 'sources';
     const summary = document.createElement('summary');
-    summary.textContent = `Fuentes consultadas (${result.sources.length})`;
+    summary.textContent = `Fuentes consultadas (${sources.length})`;
     details.append(summary);
-    result.sources.forEach((source) => {
+    sources.forEach((source) => {
       const item = document.createElement('div');
       item.className = 'source-item';
       const sourceName = document.createElement('strong');
-      sourceName.textContent = source.name || 'Guía local';
+      const location = source.page ? ` · página ${source.page}` : '';
+      const section = source.section ? ` · ${source.section}` : '';
+      sourceName.textContent = `${source.name || source.source || 'Guía local'}${location}${section}`;
       const excerpt = document.createElement('p');
-      excerpt.textContent = source.excerpt || '';
+      excerpt.textContent = source.excerpt || source.fragment || '';
       item.append(sourceName, excerpt);
       details.append(item);
     });
@@ -127,7 +130,7 @@ async function sendMessage(text) {
   addTypingIndicator();
 
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text, history: history.slice(0, -1) }),
@@ -136,7 +139,7 @@ async function sendMessage(text) {
     document.querySelector('#typing-indicator')?.remove();
     if (!response.ok) throw new Error(result.error || 'No fue posible enviar tu consulta.');
     addAssistantMessage(result);
-    history.push({ role: 'assistant', content: result.answer });
+    history.push({ role: 'assistant', content: result.respuesta || result.answer });
     if (history.length > 8) history.splice(0, history.length - 8);
   } catch (error) {
     document.querySelector('#typing-indicator')?.remove();
