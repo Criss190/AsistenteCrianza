@@ -58,6 +58,32 @@ class ChatAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.get_json()["fuentes"])
 
+    def test_follow_up_retrieves_sources_from_the_prior_topic(self):
+        response = self.client.post(
+            "/chat",
+            json={
+                "message": "¿Y qué puedo hacer después para calmarlo?",
+                "history": [
+                    {
+                        "role": "user",
+                        "content": "Mi hijo hace rabietas cuando apago la televisión",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "Anticipa el límite y valida su emoción.",
+                    },
+                ],
+            },
+        )
+
+        data = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["fuentes"])
+        self.assertEqual(
+            {fuente["source"] for fuente in data["fuentes"]},
+            {"guia_crianza.md"},
+        )
+
     def test_unknown_topic_abstains(self):
         response = self.client.post(
             "/api/chat", json={"message": "¿Cuál es la capital de Francia?"}

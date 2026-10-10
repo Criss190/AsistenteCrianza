@@ -38,7 +38,7 @@ PALABRAS_VACIAS = {
     "pero", "por", "primer", "que", "se", "son", "su", "sus", "tener",
     "un", "una", "y", "yo", "puedo", "puede", "debo", "deberia",
     "quiero", "ser", "fue", "dos", "tres", "articulo", "evidencia",
-    "durante", "intervencione", "actuale",
+    "durante", "intervencione", "actuale", "despue",
     "hijo", "hija", "hijos", "hijas", "nino", "nina", "ninos", "ninas",
 }
 GRUPOS_SINONIMOS = (
