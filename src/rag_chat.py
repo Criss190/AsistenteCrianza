@@ -39,6 +39,12 @@ PATRONES_ALERTA = re.compile(
     r"suicid\w*|autolesion\w*|hacerme dano|hacerse dano|"
     r"quiere morir|quiero morir|no quiero vivir)\b"
 )
+PATRONES_SEGUIMIENTO = re.compile(
+    r"^(?:y\b|eso\b|esa\b|ese\b|esto\b|esta\b|este\b|"
+    r"despues\b|entonces\b|tambien\b|en ese caso\b|"
+    r"que le\b|como le\b|que puedo hacer ahora\b|"
+    r"como lo\b|como eso\b|lo mismo\b)"
+)
 LOGGER = logging.getLogger(__name__)
 
 
@@ -241,11 +247,20 @@ class ChatRAG:
     def _consulta_con_historial(
         mensaje: str, historial: list[dict[str, str]]
     ) -> str:
-        """Añade preguntas previas para resolver referencias en seguimientos."""
+        """Usa preguntas previas solo si el mensaje actual parece un seguimiento."""
+        normalizado = unicodedata.normalize("NFD", mensaje.lower())
+        sin_acentos = "".join(
+            caracter
+            for caracter in normalizado
+            if unicodedata.category(caracter) != "Mn"
+        )
+        sin_puntuacion_inicial = re.sub(r"^[\s¿¡]+", "", sin_acentos)
+        if not PATRONES_SEGUIMIENTO.search(sin_puntuacion_inicial):
+            return mensaje
         preguntas_previas = [
             turno["content"] for turno in historial if turno["role"] == "user"
         ][-2:]
-        return " ".join([*preguntas_previas, mensaje])
+        return " ".join([*preguntas_previas, mensaje]) if preguntas_previas else mensaje
 
     @staticmethod
     def _es_situacion_de_riesgo(texto: str) -> bool:

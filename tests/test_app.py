@@ -65,6 +65,29 @@ class ChatAppTests(unittest.TestCase):
 
         self.assertEqual(response.get_json()["mode"], "no_evidence")
 
+    def test_new_out_of_domain_topic_does_not_reuse_previous_domain_history(self):
+        response = self.client.post(
+            "/chat",
+            json={
+                "message": "¿Cuál es la velocidad orbital de satélites alrededor de Marte?",
+                "history": [
+                    {
+                        "role": "user",
+                        "content": "Mi hijo hace rabietas cuando apago la televisión",
+                    },
+                    {
+                        "role": "assistant",
+                        "content": "Anticipa el límite y valida su emoción.",
+                    },
+                ],
+            },
+        )
+
+        data = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["mode"], "no_evidence")
+        self.assertEqual(data["fuentes"], [])
+
     def test_safety_signal_bypasses_generation(self):
         response = self.client.post(
             "/api/chat",

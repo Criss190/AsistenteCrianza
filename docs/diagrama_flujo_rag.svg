@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1040" viewBox="0 0 1600 1040" role="img" aria-labelledby="title desc">
+  <title id="title">Flujo del sistema RAG de CrianzApp</title>
+  <desc id="desc">Ingesta e indexación de conocimiento, recuperación por consulta y generación con fuentes.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#53677b"/>
+    </marker>
+    <style>
+      .bg { fill: #f5f8fb; }
+      .title { font: 700 38px Arial, sans-serif; fill: #15324b; }
+      .subtitle { font: 18px Arial, sans-serif; fill: #53677b; }
+      .node { fill: #fff; stroke: #bdd1e1; stroke-width: 2; rx: 18; }
+      .accent { fill: #e5f3ef; stroke: #8abeb0; }
+      .warn { fill: #fff4df; stroke: #e5bd73; }
+      .node-title { font: 700 20px Arial, sans-serif; fill: #15324b; }
+      .node-text { font: 16px Arial, sans-serif; fill: #40566a; }
+      .section { font: 700 21px Arial, sans-serif; fill: #356b64; }
+      .line { fill: none; stroke: #53677b; stroke-width: 3; marker-end: url(#arrow); }
+      .divider { stroke: #d2dee8; stroke-width: 2; stroke-dasharray: 8 8; }
+      .label { font: 15px Arial, sans-serif; fill: #53677b; }
+    </style>
+  </defs>
+  <rect class="bg" width="1600" height="1040"/>
+  <text class="title" x="64" y="74">Flujo completo del sistema RAG · CrianzApp</text>
+  <text class="subtitle" x="64" y="108">Del corpus documental a una respuesta conversacional trazable y con abstención</text>
+
+  <text class="section" x="64" y="166">A. Ingesta e indexación · al iniciar o cambiar el corpus</text>
+  <rect class="node" x="64" y="195" width="245" height="126"/>
+  <text class="node-title" x="88" y="235">Corpus seleccionado</text>
+  <text class="node-text" x="88" y="267">PDF · DOCX · TXT · MD</text>
+  <text class="node-text" x="88" y="291">HTML/HTM en docs/base_conocimiento</text>
+
+  <rect class="node" x="375" y="195" width="245" height="126"/>
+  <text class="node-title" x="399" y="235">Extracción de texto</text>
+  <text class="node-text" x="399" y="267">Página / sección</text>
+  <text class="node-text" x="399" y="291">source · filename</text>
+
+  <rect class="node" x="686" y="195" width="245" height="126"/>
+  <text class="node-title" x="710" y="235">Chunking recursivo</text>
+  <text class="node-text" x="710" y="267">500 caracteres</text>
+  <text class="node-text" x="710" y="291">overlap 50 · límites textuales</text>
+
+  <rect class="node" x="997" y="195" width="245" height="126"/>
+  <text class="node-title" x="1021" y="235">Vectorización local</text>
+  <text class="node-text" x="1021" y="267">Chroma default EF</text>
+  <text class="node-text" x="1021" y="291">all-MiniLM-L6-v2</text>
+
+  <rect class="node accent" x="1308" y="195" width="228" height="126"/>
+  <text class="node-title" x="1332" y="235">Chroma persistente</text>
+  <text class="node-text" x="1332" y="267">vectorstore/ · cosine</text>
+  <text class="node-text" x="1332" y="291">índice y metadatos</text>
+
+  <path class="line" d="M309 258 H365"/>
+  <path class="line" d="M620 258 H676"/>
+  <path class="line" d="M931 258 H987"/>
+  <path class="line" d="M1242 258 H1298"/>
+  <line class="divider" x1="64" y1="365" x2="1536" y2="365"/>
+
+  <text class="section" x="64" y="421">B. Recuperación, generación y respuesta · por turno de conversación</text>
+  <rect class="node" x="64" y="462" width="240" height="126"/>
+  <text class="node-title" x="88" y="502">Usuario</text>
+  <text class="node-text" x="88" y="534">pregunta + historial</text>
+  <text class="node-text" x="88" y="558">máximo 8 turnos</text>
+
+  <rect class="node" x="374" y="462" width="260" height="126"/>
+  <text class="node-title" x="398" y="502">Resolver seguimiento</text>
+  <text class="node-text" x="398" y="534">añadir contexto solo si</text>
+  <text class="node-text" x="398" y="558">el turno parece seguimiento</text>
+
+  <rect class="node" x="704" y="462" width="260" height="126"/>
+  <text class="node-title" x="728" y="502">Búsqueda semántica</text>
+  <text class="node-text" x="728" y="534">cosine · top_k=3</text>
+  <text class="node-text" x="728" y="558">distancia ≤ 0.65 + léxico</text>
+
+  <rect class="node warn" x="1034" y="462" width="220" height="126"/>
+  <text class="node-title" x="1058" y="502">¿Evidencia válida?</text>
+  <text class="node-text" x="1058" y="534">también detecta</text>
+  <text class="node-text" x="1058" y="558">señales de seguridad</text>
+
+  <rect class="node" x="1324" y="432" width="212" height="100"/>
+  <text class="node-title" x="1348" y="470">Prompt + LLM</text>
+  <text class="node-text" x="1348" y="501">System · Few-Shot</text>
+  <text class="node-text" x="1348" y="523">JSON validado · Groq</text>
+
+  <rect class="node warn" x="1324" y="570" width="212" height="100"/>
+  <text class="node-title" x="1348" y="608">Abstención</text>
+  <text class="node-text" x="1348" y="639">sin evidencia → mensaje</text>
+
+  <rect class="node accent" x="1034" y="720" width="502" height="126"/>
+  <text class="node-title" x="1058" y="760">Respuesta trazable a la interfaz</text>
+  <text class="node-text" x="1058" y="792">respuesta + fuente + extracto + página/sección</text>
+  <text class="node-text" x="1058" y="816">modo local, Groq, seguridad o sin evidencia</text>
+
+  <path class="line" d="M304 525 H364"/>
+  <path class="line" d="M634 525 H694"/>
+  <path class="line" d="M964 525 H1024"/>
+  <path class="line" d="M1254 494 H1314"/>
+  <path class="line" d="M1254 552 C1280 552 1284 620 1314 620"/>
+  <path class="line" d="M1430 532 V710"/>
+  <path class="line" d="M1430 670 V710"/>
+  <path class="line" d="M1420 321 C1420 390 834 383 834 452"/>
+  <text class="label" x="1270" y="478">Sí</text>
+  <text class="label" x="1270" y="595">No / riesgo</text>
+
+  <text class="subtitle" x="64" y="941">Seguridad: riesgo → canales humanos. Sin GROQ_API_KEY, los extractos se entregan en modo local.</text>
+  <text class="subtitle" x="64" y="974">Evaluación: Ragas para casos in-domain; tasa de abstención separada para preguntas out-of-domain.</text>
+</svg>
