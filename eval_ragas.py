@@ -175,7 +175,6 @@ def main() -> None:
         context_precision.llm,
         context_recall.llm,
     ]
-    strictness_anterior = faithfulness.strictness
     for metrica in (
         faithfulness,
         answer_relevancy,
@@ -183,7 +182,6 @@ def main() -> None:
         context_recall,
     ):
         metrica.llm = juez_ragas
-    faithfulness.strictness = 1
     try:
         resultado = evaluate(
             conjunto,
@@ -209,7 +207,6 @@ def main() -> None:
             puntajes_anteriores,
         ):
             metrica.llm = llm_anterior
-        faithfulness.strictness = strictness_anterior
 
     if len(resultado.scores) != len(registros_en_dominio):
         raise RuntimeError(

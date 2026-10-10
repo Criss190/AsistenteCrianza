@@ -118,13 +118,14 @@ generados. El historial no se guarda en el servidor ni en una base persistente.
 Las siguientes son evidencias de ejecución local en modo extractivo, no
 capturas de un despliegue público. Capturas guardadas:
 
-- [Interfaz local con conversación y citas](captura_conversacion_local.png).
-- [Consulta fuera del dominio después de una pregunta de crianza](captura_fuera_dominio_local.png).
+- [Respuesta citada sobre rabietas](captura_consulta_rabietas_local.png).
+- [Respuesta a un seguimiento](captura_seguimiento_local.png).
+- [Consulta fuera del dominio después de preguntas de crianza](captura_fuera_dominio_local.png).
 
 | Consulta | Comportamiento observado | Análisis |
 |---|---|---|
 | “Mi hijo hace rabietas cuando apago la televisión” | Respuesta local con un fragmento de `guia_crianza.md`, sección “Rabietas y límites”. | El fragmento citado respalda anticipar el límite y validar la emoción. |
-| “¿Y qué puedo hacer después para calmarlo?” | Se conservó la consulta anterior como contexto y se mostraron citas recuperadas. | Demuestra seguimiento; en la prueba se observó también un fragmento menos pertinente, indicando oportunidad de mejorar precisión. |
+| “¿Y qué puedo hacer después para calmarlo?” | Se conservó el contexto y se citó el fragmento de rabietas de `guia_crianza.md`. | La prueba cubre seguimiento y confirma que el filtro léxico descarta el fragmento TBRI que inicialmente se recuperaba por compartir el término “después”. |
 | “¿Cuál es la velocidad orbital de satélites alrededor de Marte?” tras las preguntas anteriores | El sistema se abstiene y no muestra fuentes. | La pregunta de un tema nuevo ya no hereda el historial de crianza; esto evita falsos positivos de recuperación en conversaciones mixtas. |
 
 En una prueba inicial, la pregunta de Marte heredó términos de la conversación
@@ -151,7 +152,7 @@ contexto con mala recuperación. La evaluación usa un juez Gemini
 | answer_relevancy | N/D | N/D | No hay ejecución Ragas completa. |
 | context_precision | N/D | N/D | No hay ejecución Ragas completa. |
 | context_recall | N/D | N/D | No hay ejecución Ragas completa. |
-| Abstención OOD | 3/3 en consulta aislada; seguimiento mixto corregido | Pendiente de medir en el script | Prueba funcional, no puntuación Ragas. |
+| Abstención OOD | 3/3 preguntas OOD del dataset, sin contexto recuperado | La prueba de seguimiento mixto pasa; falta reevaluar el conjunto tras el cambio | Prueba funcional, no puntuación Ragas. |
 
 Las ejecuciones previas del evaluador terminaron con `504 Deadline Exceeded`
 del servicio de Google; por tanto no existe una tabla numérica antes/después

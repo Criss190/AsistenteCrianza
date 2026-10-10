@@ -24,11 +24,13 @@ flowchart LR
     J --> M
 ```
 
-El diseño, decisiones, limitaciones, plan de evaluación y estado de despliegue
-se explican en [docs/flujo_completo_rag.md](docs/flujo_completo_rag.md). El
-diagrama también está disponible en [docs/diagrama_flujo_rag.svg](docs/diagrama_flujo_rag.svg).
-El PDF de entrega, cuando se genere con resultados y capturas verificables,
-debe enlazarse aquí; no se publican métricas ni capturas inventadas.
+El diseño, decisiones, limitaciones, evidencia y estado de evaluación se
+explican en [docs/flujo_completo_rag.md](docs/flujo_completo_rag.md). La
+entrega tiene también el [PDF](docs/entrega_avance2.pdf) y su fuente
+[HTML](docs/entrega_avance2.html); el diagrama está en
+[docs/diagrama_flujo_rag.svg](docs/diagrama_flujo_rag.svg). El informe
+distingue los resultados realmente medidos de los pendientes; no se estiman
+scores que Ragas no haya generado.
 
 ### Corpus
 
@@ -48,9 +50,9 @@ archivo. El splitter es `RecursiveCharacterTextSplitter` de 500 caracteres,
 solapamiento de 50 y separadores por párrafo, salto de línea, espacio y
 carácter. Chroma persiste los textos, metadatos e índices en `vectorstore/`.
 El embedding explícito es `sentence-transformers/all-MiniLM-L6-v2`, ejecutado
-localmente por la función predeterminada de Chroma. El criterio cosine y la
-huella de corpus/configuración permiten reindexar si cambia el corpus o el
-chunking.
+localmente por la función predeterminada de Chroma; es compacto y no requiere
+llaves ni llamadas remotas para vectorizar. Es una limitación conocida que no
+sea multilingüe y se documenta como mejora candidata.
 
 La búsqueda obtiene candidatos por similitud coseno; se conservan hasta tres
 fragmentos que cumplan distancia máxima 0.65 y un solapamiento léxico mínimo
