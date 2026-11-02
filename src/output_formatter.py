@@ -1,16 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-output_formatter.py
----------------------
-Define el "contrato" de salida del asistente (el mismo formato exigido en
-el System Prompt) y una función de validación que comprueba que una
-respuesta cumple ese contrato.
-
-Al no conectarse a un LLM real en este proyecto, `output_formatter`
-genera respuestas deterministas a partir de fragmentos recuperados desde
-la base de conocimiento local y conserva una ruta de simulación para
-compatibilidad con la demo original.
-"""
+"""Contrato y validación de la salida JSON del modelo."""
 
 CLAVES_ESPERADAS = {
     "resumen_breve": str,
@@ -27,10 +16,14 @@ PALABRAS_ALERTA = [
 
 def validar_formato(respuesta: dict) -> bool:
     """
-    Verifica que `respuesta` tenga exactamente las claves y tipos
-    definidos en CLAVES_ESPERADAS. Lanza ValueError con el detalle si no
-    cumple el contrato.
+    Valida claves, tipos y límites conversacionales del contrato JSON.
+
+    Lanza ValueError si faltan claves, el contenido es excesivo o la salida
+    incluye preguntas de seguimiento.
     """
+    if not isinstance(respuesta, dict):
+        raise ValueError("La respuesta debe ser un objeto JSON.")
+
     claves_respuesta = set(respuesta.keys())
     claves_definidas = set(CLAVES_ESPERADAS.keys())
 
@@ -48,6 +41,28 @@ def validar_formato(respuesta: dict) -> bool:
                 f"La clave '{clave}' debe ser de tipo {tipo_esperado}, "
                 f"llegó {type(respuesta[clave])}."
             )
+
+    resumen = respuesta["resumen_breve"].strip()
+    estrategias = respuesta["estrategias"]
+    senal = respuesta["senal_alerta"]
+    if not resumen or len(resumen) > 360:
+        raise ValueError("El resumen debe tener entre 1 y 360 caracteres.")
+    if not 1 <= len(estrategias) <= 3:
+        raise ValueError("Debe haber entre una y tres estrategias.")
+    if any(
+        not isinstance(item, str)
+        or not item.strip()
+        or len(item) > 240
+        for item in estrategias
+    ):
+        raise ValueError("Cada estrategia debe ser texto breve y no vacío.")
+    textos = [resumen, *estrategias]
+    if isinstance(senal, str):
+        if not senal.strip() or len(senal) > 240:
+            raise ValueError("La señal debe ser texto breve y no vacío.")
+        textos.append(senal)
+    if any("?" in texto or "¿" in texto for texto in textos):
+        raise ValueError("La respuesta no debe incluir preguntas de seguimiento.")
     return True
 
 
@@ -90,7 +105,6 @@ def generar_respuesta_simulada(contexto: str, pregunta: str) -> dict:
                 "Anticipa el límite antes del momento de conflicto.",
                 "Valida la emoción del niño/a sin ceder el límite.",
                 "Mantén la calma y la coherencia en la respuesta.",
-                "Refuerza positivamente cuando logre regularse.",
             ],
             "senal_alerta": None,
             "derivar_a_profesional": False,
@@ -130,7 +144,7 @@ def generar_respuesta_local(contexto: str, pregunta: str, fragmentos: list) -> d
                 "conocimiento local. Estas son las orientaciones "
                 "recuperadas para tu consulta."
             ),
-            "estrategias": [fragmento.texto for fragmento in fragmentos[:4]],
+            "estrategias": [fragmento.texto for fragmento in fragmentos[:3]],
             "senal_alerta": None,
             "derivar_a_profesional": False,
         }

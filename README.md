@@ -13,8 +13,7 @@ flowchart LR
     B --> C["Fragmentación recursiva<br/>500 caracteres · 50 solapados"]
     C --> D["Embeddings locales<br/>all-MiniLM-L6-v2"]
     D --> E[("ChromaDB persistente<br/>vectorstore/")]
-    F["Pregunta + historial<br/>máx. 8 turnos"] --> G["Normalización de seguimiento<br/>últimas 2 preguntas"]
-    G --> H["Búsqueda coseno + filtro<br/>top_k=3 · distancia ≤ 0.65"]
+    F["Pregunta del turno actual"] --> H["Búsqueda coseno + filtro<br/>top_k=3 · distancia ≤ 0.65"]
     E --> H
     H --> I{"¿Hay evidencia?"}
     I -- No --> J["Abstención explícita"]
@@ -56,10 +55,10 @@ sea multilingüe y se documenta como mejora candidata.
 
 La búsqueda obtiene candidatos por similitud coseno; se conservan hasta tres
 fragmentos que cumplan distancia máxima 0.65 y un solapamiento léxico mínimo
-con la consulta. En seguimientos, se añaden las dos preguntas anteriores a la
-consulta de recuperación. El modelo recibe hasta ocho turnos en el prompt.
-Sin evidencia aceptable, la respuesta es: “No dispongo de esa información en
-la base de conocimientos”.
+con la consulta actual. El historial visual no se envía al backend ni al LLM;
+formula cada seguimiento incluyendo el tema para evitar mezclar asuntos y
+reducir datos/tokens transmitidos. Sin evidencia aceptable, la respuesta es:
+“No dispongo de esa información en la base de conocimientos”.
 
 ## Instalación y ejecución
 
@@ -84,8 +83,8 @@ extractivo. Abre `http://localhost:5000`.
 - `GET /`: interfaz de conversación.
 - `GET /api/health`: disponibilidad, cantidad de chunks y estado del LLM; no
   devuelve secretos.
-- `POST /chat` y alias `POST /api/chat`: JSON `{ "message": "...",
-  "history": [{"role": "user|assistant", "content": "..."}] }`; devuelve
+- `POST /chat` y alias `POST /api/chat`: JSON `{ "message": "..." }`; el
+  campo `history` antiguo se acepta pero se ignora. Devuelve
   `respuesta`, `fuentes`, `mode` y `notice`, además de alias en inglés.
 - Las fuentes tienen archivo, extracto, `chunk_id` y página/sección disponible.
 
@@ -141,5 +140,5 @@ por lo que el índice se reconstruye en cada despliegue.
 El asistente brinda información general; no diagnostica ni reemplaza atención
 profesional. Señales de abuso, violencia o autolesión tienen una respuesta de
 seguridad prioritaria. En Colombia se informa la línea ICBF 141 y emergencias
-123. Al habilitar Groq, la pregunta, historial y fragmentos recuperados se
+123. Al habilitar Groq, la pregunta actual y los fragmentos recuperados se
 envían a ese proveedor. No incluyas datos identificables de niños o niñas.

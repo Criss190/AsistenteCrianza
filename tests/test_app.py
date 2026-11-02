@@ -37,52 +37,40 @@ class ChatAppTests(unittest.TestCase):
         self.assertTrue(data["sources"][0]["chunk_id"])
         self.assertTrue(data["sources"][0]["excerpt"])
 
-    def test_chat_accepts_and_uses_conversation_history(self):
+    def test_chat_ignores_history_and_answers_the_current_turn_only(self):
         response = self.client.post(
             "/chat",
             json={
-                "message": "¿Y qué le puedo ofrecer después?",
+                "message": "¿Cuál es la capital de Francia?",
                 "history": [
                     {
                         "role": "user",
-                        "content": "Mi hijo hace rabietas cuando apago la televisión",
+                        "content": "Mi hija me contó que un familiar la toca",
                     },
                     {
                         "role": "assistant",
-                        "content": "Anticipa el límite y valida su emoción.",
+                        "content": "Busca ayuda de protección infantil.",
                     },
                 ],
             },
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.get_json()["fuentes"])
+        self.assertEqual(response.get_json()["mode"], "no_evidence")
+        self.assertEqual(response.get_json()["fuentes"], [])
 
-    def test_follow_up_retrieves_sources_from_the_prior_topic(self):
+    def test_follow_up_without_topic_context_abstains_instead_of_guessing(self):
         response = self.client.post(
             "/chat",
             json={
                 "message": "¿Y qué puedo hacer después para calmarlo?",
-                "history": [
-                    {
-                        "role": "user",
-                        "content": "Mi hijo hace rabietas cuando apago la televisión",
-                    },
-                    {
-                        "role": "assistant",
-                        "content": "Anticipa el límite y valida su emoción.",
-                    },
-                ],
             },
         )
 
         data = response.get_json()
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(data["fuentes"])
-        self.assertEqual(
-            {fuente["source"] for fuente in data["fuentes"]},
-            {"guia_crianza.md"},
-        )
+        self.assertEqual(data["mode"], "no_evidence")
+        self.assertEqual(data["fuentes"], [])
 
     def test_unknown_topic_abstains(self):
         response = self.client.post(
@@ -123,6 +111,39 @@ class ChatAppTests(unittest.TestCase):
         data = response.get_json()
         self.assertEqual(data["mode"], "safety")
         self.assertIn("141", data["answer"])
+
+    def test_invalid_groq_output_falls_back_to_local_evidence(self):
+        from unittest.mock import patch
+        from src.knowledge_base import FragmentoConocimiento
+
+        chat_rag.api_key = "configured"
+        fragmento = FragmentoConocimiento(
+            fuente="guia_test.md",
+            texto="Anticipa el límite y valida la emoción con calma.",
+            chunk_id="test-1",
+        )
+        with (
+            patch.object(
+                chat_rag.base_conocimiento,
+                "buscar",
+                return_value=[fragmento],
+            ),
+            patch.object(
+                chat_rag,
+                "_generar_con_groq",
+                side_effect=ValueError("JSON inválido"),
+            ),
+        ):
+            response = self.client.post(
+                "/chat",
+                json={"message": "Mi hijo hace rabietas cuando apago la televisión"},
+            )
+
+        data = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["mode"], "local")
+        self.assertTrue(data["sources"])
+        self.assertIn("No fue posible generar", data["notice"])
 
     def test_invalid_message_is_rejected(self):
         response = self.client.post("/api/chat", json={"message": "   "})

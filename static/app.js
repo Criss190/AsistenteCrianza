@@ -5,7 +5,6 @@ const conversation = document.querySelector('#conversation');
 const suggestions = document.querySelector('#suggestions');
 const charCount = document.querySelector('#char-count');
 const knowledgeStatus = document.querySelector('#knowledge-status');
-const history = [];
 
 function scrollToLatest() {
   window.requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
@@ -122,8 +121,6 @@ function addAssistantMessage(result) {
 
 async function sendMessage(text) {
   addUserMessage(text);
-  history.push({ role: 'user', content: text });
-  if (history.length > 8) history.splice(0, history.length - 8);
   if (suggestions) suggestions.hidden = true;
   sendButton.disabled = true;
   input.disabled = true;
@@ -133,14 +130,12 @@ async function sendMessage(text) {
     const response = await fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, history: history.slice(0, -1) }),
+      body: JSON.stringify({ message: text }),
     });
     const result = await response.json();
     document.querySelector('#typing-indicator')?.remove();
     if (!response.ok) throw new Error(result.error || 'No fue posible enviar tu consulta.');
     addAssistantMessage(result);
-    history.push({ role: 'assistant', content: result.respuesta || result.answer });
-    if (history.length > 8) history.splice(0, history.length - 8);
   } catch (error) {
     document.querySelector('#typing-indicator')?.remove();
     addAssistantMessage({ answer: error.message || 'No se pudo conectar. Comprueba tu conexión e inténtalo de nuevo.', mode: 'no_evidence', sources: [] });

@@ -8,9 +8,8 @@ import os
 import re
 import unicodedata
 from pathlib import Path
+from time import perf_counter
 from typing import Any
-
-from groq import APIConnectionError, APIStatusError
 
 from src.knowledge_base import BaseConocimientoLocal, FragmentoConocimiento
 from src.output_formatter import validar_formato
@@ -38,12 +37,6 @@ PATRONES_ALERTA = re.compile(
     r"violacion|violaciones|acoso sexual|abuso sexual|explotacion sexual|"
     r"suicid\w*|autolesion\w*|hacerme dano|hacerse dano|"
     r"quiere morir|quiero morir|no quiero vivir)\b"
-)
-PATRONES_SEGUIMIENTO = re.compile(
-    r"^(?:y\b|eso\b|esa\b|ese\b|esto\b|esta\b|este\b|"
-    r"despues\b|entonces\b|tambien\b|en ese caso\b|"
-    r"que le\b|como le\b|que puedo hacer ahora\b|"
-    r"como lo\b|como eso\b|lo mismo\b)"
 )
 LOGGER = logging.getLogger(__name__)
 
@@ -83,17 +76,17 @@ class ChatRAG:
     def responder(
         self, mensaje: str, historial: list[dict[str, Any]] | None = None
     ) -> dict[str, Any]:
-        """Responde con evidencia recuperada, absteniéndose cuando no la hay."""
-        historial_seguro = self._limpiar_historial(historial or [])
-        consulta = self._consulta_con_historial(mensaje, historial_seguro)
-        fragmentos = self.base_conocimiento.buscar(consulta, limite=self.top_k)
+        """Responde solo a partir del mensaje actual y evidencia recuperada.
+
+        `historial` se conserva por compatibilidad con clientes anteriores,
+        pero se ignora para evitar arrastre de temas y envío de datos al LLM.
+        """
+        del historial
+        fragmentos = self.base_conocimiento.buscar(mensaje, limite=self.top_k)
         fuentes = self._formatear_fuentes(fragmentos)
         contextos = [fragmento.texto for fragmento in fragmentos]
 
-        texto_sensible = " ".join(
-            [mensaje, *(turno["content"] for turno in historial_seguro)]
-        )
-        if self._es_situacion_de_riesgo(texto_sensible):
+        if self._es_situacion_de_riesgo(mensaje):
             return self._resultado(
                 MENSAJE_ALERTA,
                 fuentes,
@@ -111,18 +104,16 @@ class ChatRAG:
             return self._respuesta_local(fragmentos, fuentes, contextos)
 
         try:
-            respuesta = self._generar_con_groq(
-                mensaje, historial_seguro, fragmentos
-            )
-        except (APIConnectionError, APIStatusError):
-            LOGGER.exception("Groq no estuvo disponible para generar la respuesta")
+            respuesta = self._generar_con_groq(mensaje, fragmentos)
+        except Exception:
+            LOGGER.exception("No se pudo generar una respuesta válida con Groq")
             return self._respuesta_local(
                 fragmentos,
                 fuentes,
                 contextos,
                 notice=(
-                    "No fue posible conectar con Groq; te comparto directamente "
-                    "la evidencia local recuperada."
+                    "No fue posible generar una respuesta; te comparto "
+                    "directamente la evidencia local recuperada."
                 ),
             )
         return self._resultado(respuesta, fuentes, contextos, "groq", None)
@@ -130,7 +121,6 @@ class ChatRAG:
     def _generar_con_groq(
         self,
         mensaje: str,
-        historial: list[dict[str, str]],
         fragmentos: list[FragmentoConocimiento],
     ) -> str:
         """Genera una respuesta estructurada a partir de los fragmentos citados."""
@@ -140,19 +130,24 @@ class ChatRAG:
             f"[Fuente: {fragmento.fuente}]\n{fragmento.texto}"
             for fragmento in fragmentos
         )
-        prompt = build_prompt(
-            contexto_usuario="",
-            pregunta_usuario=mensaje,
-            conocimiento_recuperado=contexto,
-            historial=historial,
-        )
+        mensajes = build_prompt(mensaje, contexto)
         cliente = Groq(api_key=self.api_key, timeout=25.0, max_retries=1)
+        inicio = perf_counter()
         completion = cliente.chat.completions.create(
             model=self.modelo,
-            messages=[{"role": "user", "content": prompt}],
+            messages=mensajes,
             temperature=0.2,
-            max_tokens=550,
+            max_tokens=350,
             response_format={"type": "json_object"},
+        )
+        uso = completion.usage
+        LOGGER.info(
+            "Groq completado model=%s input_tokens=%s output_tokens=%s "
+            "latency_ms=%.0f",
+            self.modelo,
+            getattr(uso, "prompt_tokens", None),
+            getattr(uso, "completion_tokens", None),
+            (perf_counter() - inicio) * 1000,
         )
         contenido = completion.choices[0].message.content
         if not contenido:
@@ -227,40 +222,6 @@ class ChatRAG:
             }
             for fragmento in fragmentos
         ]
-
-    @staticmethod
-    def _limpiar_historial(historial: list[dict[str, Any]]) -> list[dict[str, str]]:
-        """Limita el historial a turnos de usuario y asistente con texto."""
-        limpio: list[dict[str, str]] = []
-        for turno in historial[-8:]:
-            if not isinstance(turno, dict):
-                continue
-            role = turno.get("role")
-            content = turno.get("content")
-            if role in {"user", "assistant"} and isinstance(content, str):
-                content = content.strip()[:800]
-                if content:
-                    limpio.append({"role": role, "content": content})
-        return limpio
-
-    @staticmethod
-    def _consulta_con_historial(
-        mensaje: str, historial: list[dict[str, str]]
-    ) -> str:
-        """Usa preguntas previas solo si el mensaje actual parece un seguimiento."""
-        normalizado = unicodedata.normalize("NFD", mensaje.lower())
-        sin_acentos = "".join(
-            caracter
-            for caracter in normalizado
-            if unicodedata.category(caracter) != "Mn"
-        )
-        sin_puntuacion_inicial = re.sub(r"^[\s¿¡]+", "", sin_acentos)
-        if not PATRONES_SEGUIMIENTO.search(sin_puntuacion_inicial):
-            return mensaje
-        preguntas_previas = [
-            turno["content"] for turno in historial if turno["role"] == "user"
-        ][-2:]
-        return " ".join([*preguntas_previas, mensaje]) if preguntas_previas else mensaje
 
     @staticmethod
     def _es_situacion_de_riesgo(texto: str) -> bool:

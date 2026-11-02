@@ -36,21 +36,22 @@ Pipeline durante el arranque:
 
 Pipeline por turno:
 
-1. Validar el JSON y limpiar el historial, conservando como máximo ocho
-   mensajes user/assistant.
-2. Detectar si el mensaje actual es un seguimiento antes de anteponer las dos
-   preguntas anteriores a la consulta de recuperación. Una nueva pregunta no
-   relacionada no hereda el tema de turnos previos.
+1. Validar el JSON de la pregunta actual. El cliente puede enviar `history`
+   por compatibilidad, pero el backend lo ignora; cada turno es stateless.
+2. Recuperar evidencia usando exclusivamente el mensaje actual. Para un
+   seguimiento, la persona debe repetir el tema relevante; no se arrastran
+   preguntas anteriores ni se transmiten al proveedor.
 3. Buscar similitud coseno en Chroma, aplicar un umbral de distancia máxima
    `0.65` y verificar solapamiento léxico. Devolver hasta tres fragmentos.
 4. Ante señales de abuso, violencia o autolesión, priorizar orientación de
    seguridad. Sin fragmentos aceptables, abstenerse explícitamente.
-5. Con evidencia y `GROQ_API_KEY`, componer el prompt, llamar al LLM y validar
-   su salida JSON. Si Groq no está configurado, presentar extractos sin
-   generación.
+5. Con evidencia y `GROQ_API_KEY`, enviar mensajes por roles con consulta y
+   evidencia serializadas como JSON, generar hasta 350 tokens y validar el
+   contrato. Si el proveedor falla o la salida no valida, presentar extractos
+   locales con un aviso; sin clave, no hay llamada externa.
 6. Devolver respuesta, extractos y metadatos de citas a Flask; la interfaz
-   mantiene el historial de la pestaña y presenta las fuentes debajo de cada
-   respuesta.
+   conserva visualmente la conversación en la pestaña, sin enviar los turnos
+   anteriores al servidor, y presenta las fuentes debajo de cada respuesta.
 
 ## 3. Decisiones técnicas
 
@@ -105,13 +106,15 @@ debe devolver cero fuentes y el texto explícito de abstención.
 
 ### Prompt y generación
 
-`prompt_builder.py` conserva el `SYSTEM_PROMPT`, Few-Shot del Avance 1,
-delimitadores XML y contrato JSON. Añade historial validado, pregunta y
-fragmentos recuperados, y exige que la respuesta se base únicamente en la
-base. Groq (`GROQ_MODEL`, predeterminado `openai/gpt-oss-120b`) redacta la
-respuesta con temperatura `0.2` y JSON mode; `output_formatter.py` valida
-claves y tipos. Sin Groq, una respuesta extractiva evita introducir hechos
-generados. El historial no se guarda en el servidor ni en una base persistente.
+`prompt_builder.py` separa `system`, ejemplos `user/assistant` y la consulta
+actual. Pregunta y evidencia se codifican como JSON, no se interpolan en
+delimitadores textuales. Los ejemplos son breves, citan la evidencia de
+entrada y no recomiendan acciones sin respaldo. El system prompt pide una
+respuesta directa sin preguntas de seguimiento, de 1–3 pasos concretos.
+Groq (`GROQ_MODEL`, predeterminado `openai/gpt-oss-120b`) redacta con
+temperatura `0.2`, JSON mode y límite de 350 tokens; `output_formatter.py`
+valida claves, longitudes, cantidad de pasos y ausencia de preguntas. Si falla
+la generación, el modo extractivo usa la evidencia ya recuperada.
 
 ## 4. Consultas observadas y análisis
 
@@ -125,13 +128,13 @@ capturas de un despliegue público. Capturas guardadas:
 | Consulta | Comportamiento observado | Análisis |
 |---|---|---|
 | “Mi hijo hace rabietas cuando apago la televisión” | Respuesta local con un fragmento de `guia_crianza.md`, sección “Rabietas y límites”. | El fragmento citado respalda anticipar el límite y validar la emoción. |
-| “¿Y qué puedo hacer después para calmarlo?” | Se conservó el contexto y se citó el fragmento de rabietas de `guia_crianza.md`. | La prueba cubre seguimiento y confirma que el filtro léxico descarta el fragmento TBRI que inicialmente se recuperaba por compartir el término “después”. |
-| “¿Cuál es la velocidad orbital de satélites alrededor de Marte?” tras las preguntas anteriores | El sistema se abstiene y no muestra fuentes. | La pregunta de un tema nuevo ya no hereda el historial de crianza; esto evita falsos positivos de recuperación en conversaciones mixtas. |
+| “¿Y qué puedo hacer después para calmarlo?” sin repetir el tema | El sistema se abstiene y no muestra fuentes. | Se evita adivinar el tema a partir del historial del cliente; la pregunta debe incluir el asunto (por ejemplo, “durante una rabieta”). |
+| “¿Cuál es la velocidad orbital de satélites alrededor de Marte?” | El sistema se abstiene y no muestra fuentes. | La consulta OOD no hereda términos de crianza ni recibe citas irrelevantes. |
 
-En una prueba inicial, la pregunta de Marte heredó términos de la conversación
-de crianza y recibió fuentes irrelevantes. Se corrigió la expansión del
-contexto: solo se arrastran turnos previos cuando el texto actual parece un
-seguimiento. La regresión tiene una prueba automatizada.
+El historial se retiró del camino de recuperación porque la heurística de
+seguimiento no puede distinguir de forma fiable una referencia ambigua y
+alarga cada prompt. Las pruebas verifican que el historial de un tema sensible
+no modifica una pregunta nueva y que un seguimiento ambiguo abstiene.
 
 ## 5. Evaluación con Ragas
 
@@ -152,7 +155,7 @@ contexto con mala recuperación. La evaluación usa un juez Gemini
 | answer_relevancy | N/D | N/D | No hay ejecución Ragas completa. |
 | context_precision | N/D | N/D | No hay ejecución Ragas completa. |
 | context_recall | N/D | N/D | No hay ejecución Ragas completa. |
-| Abstención OOD | 3/3 preguntas OOD del dataset, sin contexto recuperado | La prueba de seguimiento mixto pasa; falta reevaluar el conjunto tras el cambio | Prueba funcional, no puntuación Ragas. |
+| Abstención OOD | 3/3 preguntas OOD del dataset, sin contexto recuperado | Las pruebas unitarias verifican OOD y seguimiento ambiguo stateless; falta reevaluar todo el conjunto | Prueba funcional, no puntuación Ragas. |
 
 Las ejecuciones previas del evaluador terminaron con `504 Deadline Exceeded`
 del servicio de Google; por tanto no existe una tabla numérica antes/después
@@ -162,12 +165,11 @@ solo después de que Ragas evalúe todas las preguntas y lo documenta en
 
 ### Iteración incorporada y protocolo para medirla
 
-La prueba de conversación encontró contaminación del tema anterior hacia
-preguntas nuevas. Se modificó el componente de recuperación para añadir el
-historial solamente en seguimientos y se añadió una prueba que verifica que
-una pregunta OOD sobre Marte tras una conversación de rabietas se abstenga y
-no devuelva citas. El cambio funcional está probado; las métricas Ragas de
-antes/después siguen pendientes por el timeout externo.
+La prueba de conversación mostró que la heurística de historial no daba una
+resolución fiable de seguimientos. El componente se actualizó a requests
+stateless: una pregunta OOD no hereda contexto de crianza y un seguimiento
+ambiguo abstiene en vez de adivinar. La integración con un juez Ragas y las
+métricas antes/después siguen pendientes por el timeout externo.
 
 Para producir la comparación cuantitativa cuando Google responda, ejecutar
 desde la raíz, con Python 3.12.8 y `GOOGLE_API_KEY` en `.env`:
@@ -189,9 +191,10 @@ ejecutarse para cerrar el requisito cuantitativo.
 
 ## 6. Interfaz y despliegue
 
-La UI Flask mantiene hasta ocho turnos en memoria de la pestaña, transmite el
-historial a `POST /chat` y renderiza las fuentes por respuesta. La prueba visual
-de este documento es local, no demuestra disponibilidad pública.
+La UI Flask mantiene la conversación solo para visualización local y envía a
+`POST /chat` únicamente el mensaje actual; renderiza las fuentes por respuesta.
+La prueba visual de este documento es local, no demuestra disponibilidad
+pública.
 
 Repositorio GitHub:
 [Criss190/AsistenteCrianza](https://github.com/Criss190/AsistenteCrianza).
@@ -207,10 +210,14 @@ efímero, se reconstruye al arrancar.
 
 ## 7. Verificación del repositorio
 
-Validación local: 12 pruebas automatizadas pasan, incluyendo los cinco tipos
-de archivo, metadatos, dataset, endpoint, seguimiento conversacional,
-abstención fuera de dominio y respuesta de seguridad. Las advertencias actuales
-de Pydantic/Chroma son de deprecación y no hacen fallar los tests.
+Con el corpus disponible, las 19 pruebas pasaron tras los cambios usando
+`unittest discover -s tests -v`. En una ejecución posterior, el directorio
+`docs/base_conocimiento/` y otros recursos documentales ya no estaban en el
+árbol; el resultado final fue 17/19, con fallos en health y recuperación local
+por ausencia de corpus. No se restauraron esos archivos porque su eliminación
+no formaba parte de esta tarea. `pytest` no está instalado. No se ejecutó Groq
+ni una evaluación Ragas externa, así que latencia, costo y métricas de calidad
+del proveedor siguen sin medir.
 
 Los cambios de esta revisión están en el árbol de trabajo local y aún deben
 subirse al repositorio antes de afirmar que el GitHub remoto contiene esta
