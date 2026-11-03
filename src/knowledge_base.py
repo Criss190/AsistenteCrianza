@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 import hashlib
 from html.parser import HTMLParser
+import math
 from pathlib import Path
 import re
 import unicodedata
@@ -23,6 +25,8 @@ FUENTES_EXCLUIDAS = {"guia_crianza.md"}
 TAMANO_FRAGMENTO = 500
 SOLAPAMIENTO_FRAGMENTO = 50
 DISTANCIA_MAXIMA = 0.65
+DISTANCIA_COINCIDENCIA_UNICA = 0.57
+PUNTAJE_BM25_COINCIDENCIA_UNICA = 8.0
 NOMBRE_COLECCION = "crianzapp_conocimiento"
 MODELO_EMBEDDINGS = "sentence-transformers/all-MiniLM-L6-v2"
 TAGS_BLOQUE_HTML = {
@@ -33,40 +37,140 @@ TAGS_BLOQUE_HTML = {
 TAGS_IGNORADOS_HTML = {"head", "script", "style", "noscript", "svg"}
 PALABRAS_VACIAS = {
     "a", "al", "algo", "cada", "como", "con", "cual", "cuale", "cuando",
-    "colombia", "de", "del",
-    "donde", "el", "ella", "en", "es", "esta", "este", "hacer", "hay",
-    "la", "las", "le", "lo", "los", "me", "mi", "mis", "o", "para",
-    "pero", "por", "primer", "que", "se", "son", "su", "sus", "tener",
-    "un", "una", "y", "yo", "puedo", "puede", "debo", "deberia",
-    "quiero", "ser", "fue", "dos", "tres", "articulo", "evidencia",
-    "durante", "intervencione", "actuale", "despue",
+    "colombia", "de", "del", "despues", "documento", "donde", "el", "ella",
+    "en", "es", "esta", "este", "hacer", "hay", "la", "las", "le", "lo",
+    "los", "me", "mi", "mis", "o", "para", "pero", "por", "primer", "que",
+    "se", "segun", "si", "son", "su", "sus", "tener", "un", "una", "y", "yo",
+    "puedo", "puede", "debo", "deberia", "quiero", "ser", "fue", "dos",
+    "articulo", "evidencia", "durante", "actual", "frente",
+    "importante", "tan", "ayudar", "ayudame", "hago", "hace", "haces",
+    "tiene", "tienen", "hacerlo", "hacerle", "conciliar", "implementar",
+    "establecer", "quisiera", "mejor", "mejore", "seria", "podria",
+    "podrias", "puedes", "podemos", "ante", "antes", "utilizada",
+    "utilizado", "significan", "significa", "significar", "sigla",
+    "siglas", "cumplir", "cumple", "cumplen", "clave", "factor",
+    "descrito", "describen", "incrementar", "incrementaron", "basado",
+    "basada", "presenta", "presentan", "gomez", "muzzio", "lin", "lewry",
+    "et", "revision", "sistematica", "tbri",
     "hijo", "hija", "hijos", "hijas", "nino", "nina", "ninos", "ninas",
 }
 GRUPOS_SINONIMOS = (
-    {"pantalla", "television", "tele"},
-    {"rabieta", "berrinche", "frustracion"},
-    {"emocion", "sentimiento"},
+    ("pantalla", "television", "tele"),
+    ("rabieta", "berrinche", "frustracion"),
+    ("emocion", "sentimiento"),
+    (
+        "sueno", "dormir", "dormida", "dormido", "dormirse", "acostar",
+        "acostarse", "acostarlo", "acostarla", "acostarle", "descanso",
+        "descansar", "nocturno", "nocturna", "noche",
+    ),
+    ("intervencion", "intervention"),
+    ("efecto", "effect"),
+    ("padre", "padres", "parent", "parents", "parenting", "padr"),
+    ("postparto", "postpartum"),
+    ("apoyo", "support"),
+    ("depresion", "depressive", "depression"),
+    ("moderador", "moderators", "moderator"),
+    ("efectividad", "effectiveness"),
+    ("orientacion", "orientation"),
+    ("guiado", "guided"),
+    ("autoeficacia", "efficacy", "selfefficacy"),
 )
+_SINONIMO_CANONICO = {
+    sinonimo: grupo[0]
+    for grupo in GRUPOS_SINONIMOS
+    for sinonimo in grupo
+}
+_EXPANSIONES_INGLES = {
+    "efecto": "effects",
+    "intervencion": "interventions",
+    "padre": "parenting parents",
+    "postparto": "postpartum",
+    "apoyo": "support",
+    "depresion": "depressive symptoms",
+    "moderador": "moderators",
+    "efectividad": "effectiveness",
+    "orientacion": "orientation",
+    "guiado": "guided curriculum",
+}
 
 
-def _terminos_relevantes(texto: str) -> set[str]:
-    """Obtiene términos de contenido para verificar soporte léxico mínimo."""
+def _tokenizar_relevante(texto: str) -> list[str]:
+    """Normaliza palabras de contenido para búsqueda léxica y BM25."""
     normalizado = unicodedata.normalize("NFD", texto.lower())
     sin_acentos = "".join(
         caracter
         for caracter in normalizado
         if unicodedata.category(caracter) != "Mn"
     )
-    terminos = {
-        token[:-1] if token.endswith("s") and len(token) > 4 else token
-        for token in re.findall(r"[a-z0-9]+", sin_acentos)
+    terminos: list[str] = []
+    for token in re.findall(r"[a-z0-9]+", sin_acentos):
+        if re.fullmatch(r"(?:19|20)\d{2}", token):
+            continue
+        if token.endswith("es") and len(token) > 5:
+            token = token[:-2]
+        elif token.endswith("s") and len(token) > 4:
+            token = token[:-1]
+        if token == "cuatro":
+            token = "4"
+        token = _SINONIMO_CANONICO.get(token, token)
+        if token not in PALABRAS_VACIAS:
+            terminos.append(token)
+
+    if re.search(
+        r"\b(?:que es|que significa|significan las siglas|siglas de|definicion)\b",
+        sin_acentos,
+    ) or re.search(r"\b(?:que es|definicion|se define)\b", sin_acentos):
+        terminos.append("definicion")
+    return terminos
+
+
+def _terminos_relevantes(texto: str) -> set[str]:
+    """Obtiene términos de contenido normalizados y sin duplicados."""
+    return set(_tokenizar_relevante(texto))
+
+
+def _consulta_bilingue(terminos: set[str]) -> str | None:
+    """Añade una consulta en inglés cuando el corpus mezcla idiomas."""
+    expansiones = {
+        expansion
+        for termino in terminos
+        if (expansion := _EXPANSIONES_INGLES.get(termino))
     }
-    terminos -= PALABRAS_VACIAS
-    expandidos = set(terminos)
-    for grupo in GRUPOS_SINONIMOS:
-        if terminos & grupo:
-            expandidos.update(grupo)
-    return expandidos
+    if "digital" in terminos:
+        expansiones.add("digital")
+    if len(expansiones) < 2:
+        return None
+    return " ".join(sorted(expansiones)) or None
+
+
+def _puntaje_bm25(
+    terminos_consulta: set[str],
+    terminos_documento: list[str],
+    frecuencia_documental: Counter[str],
+    cantidad_documentos: int,
+    longitud_media: float,
+) -> float:
+    """Calcula BM25 con parámetros estándar para un fragmento."""
+    if not cantidad_documentos or not longitud_media:
+        return 0.0
+
+    frecuencias = Counter(terminos_documento)
+    puntaje = 0.0
+    for termino in terminos_consulta:
+        frecuencia = frecuencias[termino]
+        documentos_con_termino = frecuencia_documental[termino]
+        if not frecuencia or not documentos_con_termino:
+            continue
+        idf = math.log(
+            1
+            + (cantidad_documentos - documentos_con_termino + 0.5)
+            / (documentos_con_termino + 0.5)
+        )
+        normalizacion = frecuencia + 1.5 * (
+            1 - 0.75 + 0.75 * len(terminos_documento) / longitud_media
+        )
+        puntaje += idf * (frecuencia * 2.5) / normalizacion
+    return puntaje
 
 
 @dataclass(frozen=True)
@@ -227,6 +331,21 @@ class BaseConocimientoLocal:
         self.fragmentos = fragmentos
         self._coleccion = coleccion
         self._client = client
+        self._terminos_por_fragmento = {
+            fragmento.chunk_id: _tokenizar_relevante(fragmento.texto)
+            for fragmento in fragmentos
+        }
+        self._frecuencia_documental = Counter(
+            termino
+            for terminos in self._terminos_por_fragmento.values()
+            for termino in set(terminos)
+        )
+        self._longitud_media = (
+            sum(map(len, self._terminos_por_fragmento.values()))
+            / len(self._terminos_por_fragmento)
+            if self._terminos_por_fragmento
+            else 0.0
+        )
 
     @classmethod
     def cargar(
@@ -345,28 +464,86 @@ class BaseConocimientoLocal:
         return cls(fragmentos, coleccion, cliente)
 
     def buscar(self, consulta: str, limite: int = 3) -> list[FragmentoConocimiento]:
-        """Recupera los fragmentos más similares y descarta evidencia débil."""
+        """Combina similitud semántica y BM25, y descarta evidencia débil."""
         if not consulta.strip() or limite <= 0 or self._coleccion.count() == 0:
             return []
 
-        resultado = self._coleccion.query(
-            query_texts=[consulta],
-            n_results=min(max(limite * 4, limite), self._coleccion.count()),
-            include=["documents", "metadatas", "distances"],
-        )
-        documentos = resultado["documents"][0] or []
-        metadatos = resultado["metadatas"][0] or []
-        distancias = resultado["distances"][0] or []
         terminos_consulta = _terminos_relevantes(consulta)
         if not terminos_consulta:
             return []
-        fragmentos: list[FragmentoConocimiento] = []
-        for texto, metadata, distancia in zip(documentos, metadatos, distancias):
-            if (
-                float(distancia) > DISTANCIA_MAXIMA
-                or not terminos_consulta & _terminos_relevantes(str(texto))
+
+        consultas = [consulta]
+        consulta_bilingue = _consulta_bilingue(terminos_consulta)
+        if consulta_bilingue:
+            consultas.append(consulta_bilingue)
+        resultado = self._coleccion.query(
+            query_texts=consultas,
+            n_results=self._coleccion.count(),
+            include=["documents", "metadatas", "distances"],
+        )
+
+        candidatos: dict[str, tuple[str, dict[str, Any], float]] = {}
+        for ids, documentos, metadatos, distancias in zip(
+            resultado["ids"],
+            resultado["documents"],
+            resultado["metadatas"],
+            resultado["distances"],
+        ):
+            for chunk_id, texto, metadata, distancia in zip(
+                ids, documentos, metadatos, distancias
+            ):
+                distancia_actual = float(distancia)
+                candidato = candidatos.get(str(chunk_id))
+                if candidato is None or distancia_actual < candidato[2]:
+                    candidatos[str(chunk_id)] = (
+                        str(texto),
+                        metadata,
+                        distancia_actual,
+                    )
+
+        puntajes: dict[str, float] = {}
+        for chunk_id, (texto, _, distancia) in candidatos.items():
+            terminos_documento = self._terminos_por_fragmento.get(chunk_id)
+            if terminos_documento is None:
+                terminos_documento = _tokenizar_relevante(texto)
+            compartidos = terminos_consulta & set(terminos_documento)
+            if distancia > DISTANCIA_MAXIMA or not compartidos:
+                continue
+
+            puntaje = _puntaje_bm25(
+                terminos_consulta,
+                terminos_documento,
+                self._frecuencia_documental,
+                len(self.fragmentos),
+                self._longitud_media,
+            )
+            if len(compartidos) == 1 and (
+                distancia > DISTANCIA_COINCIDENCIA_UNICA
+                or puntaje < PUNTAJE_BM25_COINCIDENCIA_UNICA
             ):
                 continue
+            puntajes[chunk_id] = puntaje
+
+        maximo_bm25 = max(puntajes.values(), default=0.0)
+        candidatos_ordenados: list[tuple[float, float, str]] = []
+        for chunk_id, puntaje in puntajes.items():
+            texto, _, distancia = candidatos[chunk_id]
+            similitud = 1.0 - distancia
+            bm25_normalizado = puntaje / maximo_bm25 if maximo_bm25 else 0.0
+            penalizacion_indice = min(
+                0.12, 0.02 * len(re.findall(r"\.{5,}", texto))
+            )
+            score = (
+                0.4 * similitud
+                + 0.6 * bm25_normalizado
+                - penalizacion_indice
+            )
+            candidatos_ordenados.append((score, distancia, chunk_id))
+        candidatos_ordenados.sort(key=lambda item: (-item[0], item[1]))
+
+        fragmentos: list[FragmentoConocimiento] = []
+        for _, distancia, chunk_id in candidatos_ordenados:
+            texto, metadata, _ = candidatos[chunk_id]
             page = metadata.get("page")
             fragmentos.append(
                 FragmentoConocimiento(

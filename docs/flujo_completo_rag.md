@@ -39,8 +39,9 @@ Pipeline por turno:
 2. Recuperar evidencia usando exclusivamente el mensaje actual. Para un
    seguimiento, la persona debe repetir el tema relevante; no se arrastran
    preguntas anteriores ni se transmiten al proveedor.
-3. Buscar similitud coseno en Chroma, aplicar un umbral de distancia máxima
-   `0.65` y verificar solapamiento léxico. Devolver hasta tres fragmentos.
+3. Buscar similitud coseno en Chroma y reranquear los fragmentos con una
+   combinación de similitud semántica y BM25. Aplicar el umbral de distancia
+   máxima `0.65`, verificar soporte léxico y devolver hasta tres fragmentos.
 4. Ante señales de abuso, violencia o autolesión, priorizar orientación de
    seguridad. Sin fragmentos aceptables, abstenerse explícitamente.
 5. Con evidencia y `GROQ_API_KEY`, enviar mensajes por roles con consulta y
@@ -107,12 +108,22 @@ calcular métricas Ragas no son las embeddings del índice Chroma.
 
 ### Recuperación y abstención
 
-Chroma busca por similitud coseno y toma como máximo `top_k=3`. Se consultan
-hasta cuatro veces más candidatos para compensar los que elimina el filtro
-léxico. Solo se aceptan distancias `<=0.65` y al menos un término de contenido
-compartido (con expansión limitada de sinónimos). Estos umbrales son
-heurísticos, no una calibración estadística. La pregunta fuera de dominio
-debe devolver cero fuentes y el texto explícito de abstención.
+La búsqueda consulta el índice completo para no perder pasajes pertinentes
+que quedan fuera de los primeros resultados vectoriales. El orden final combina
+la similitud coseno (`0.4`) con BM25 normalizado (`0.6`); los sinónimos
+controlados se normalizan a un término común. Para el artículo en inglés sobre
+intervenciones digitales se añade una consulta léxica breve en inglés cuando
+la pregunta contiene al menos dos conceptos con traducción conocida. Se usa la
+menor distancia entre la consulta original y la expansión; el filtro léxico
+siempre usa la pregunta original.
+
+Se conservan `top_k=3` y la distancia máxima `0.65`. Un fragmento que comparte
+un solo término requiere además distancia `<=0.57` y BM25 `>=8.0`; esto evita
+aceptar coincidencias aisladas como “tratado” en la pregunta sobre Versalles,
+pero permite recuperar la rutina de sueño usando el término normalizado
+“sueño/dormir”. Los fragmentos con líderes de puntos, típicos de índices,
+reciben una penalización pequeña en el orden. Estos valores son heurísticos y
+se verifican con regresiones, no son una calibración estadística.
 
 ### Prompt y generación
 
@@ -131,8 +142,8 @@ la generación, el modo extractivo usa la evidencia ya recuperada.
 | Consulta | Comportamiento observado | Análisis |
 |---|---|---|
 | “Mi hijo hace rabietas cuando apago la televisión” | La respuesta documentada anteriormente provenía de `guia_crianza.md`, ya retirado. | Es evidencia del corpus anterior; no se considera validación del corpus actual de cinco PDF. |
-| “¿Cuáles son las tres reglas para las relaciones utilizadas en el grupo de cuidado según TBRI?” | Se recuperan pasajes de `03. (español) TBRI Correccion participante.pdf`, página 12, junto con otros dos fragmentos. | Hay evidencia pertinente, pero también aparece un fragmento de otra página/tema; la precisión del Top-K requiere evaluación en la fase de recuperación. |
-| “¿Cómo puedo ayudar a un niño a conciliar el sueño?” | La búsqueda actual se abstiene y devuelve cero fuentes. | Es un resultado de recuperación, no prueba de que los PDF carezcan de contenido sobre descanso; debe investigarse en la fase de recuperación. |
+| “¿Cuáles son las tres reglas para las relaciones utilizadas en el grupo de cuidado según TBRI?” | Se recupera evidencia de `03. (español) TBRI Correccion participante.pdf`, página 12. | El reranking posiciona los fragmentos de respuesta de esa página antes que el fragmento tipo índice. |
+| “¿Cómo puedo ayudar a un niño a conciliar el sueño?” | La búsqueda híbrida devuelve el ejemplo de rutina para dormir de `04. (español) TBRI Empoderamiento participante.pdf`, página 20. | Cuatro paráfrasis de sueño recuperan la página 20 y excluyen los fragmentos de horarios que contienen alimentos/hidratación. |
 | “¿Y qué puedo hacer después para calmarlo?” sin repetir el tema | El sistema se abstiene y no muestra fuentes. | Se evita adivinar el tema a partir del historial del cliente; la pregunta debe incluir el asunto (por ejemplo, “durante una rabieta”). |
 | “¿Cuál es la velocidad orbital de satélites alrededor de Marte?” | El sistema se abstiene y no muestra fuentes. | La consulta OOD no hereda términos de crianza ni recibe citas irrelevantes. |
 
@@ -140,6 +151,25 @@ El historial se retiró del camino de recuperación porque la heurística de
 seguimiento no puede distinguir de forma fiable una referencia ambigua y
 alarga cada prompt. Las pruebas verifican que el historial de un tema sensible
 no modifica una pregunta nueva y que un seguimiento ambiguo abstiene.
+
+La regresión de recuperación incluye las 12 preguntas in-domain y las tres
+preguntas OOD de `eval_dataset.json`, además de cuatro paráfrasis sobre sueño.
+El conjunto actual recupera una ubicación pertinente para cada pregunta
+in-domain; las cuatro paráfrasis de sueño incluyen la página 20 y no devuelven
+pasajes de comida, y las tres consultas OOD devuelven cero fragmentos. Esto
+valida la recuperación local, no una mejora de métricas Ragas ni la calidad
+final de respuestas generadas por el modelo.
+
+Páginas con evidencia entre los tres resultados, en el orden de las preguntas
+in-domain de `eval_dataset.json`:
+
+| Pregunta | Fuente y páginas recuperadas |
+|---|---|
+| 1–3 | Corrección: p. 12; p. 19; p. 27 |
+| 4–6 | Empoderamiento: p. 8; p. 10; p. 16 |
+| 7–8 | Conexión: p. 9 y 7; p. 17 |
+| 9–10 | Gómez Muzzio: p. 5; p. 7 |
+| 11–12 | `39.pdf`: p. 6, 2 y 7; p. 5 y 1 |
 
 ## 5. Evaluación con Ragas
 
@@ -160,7 +190,7 @@ contexto con mala recuperación. La evaluación usa un juez Gemini
 | answer_relevancy | N/D | N/D | No hay ejecución Ragas completa. |
 | context_precision | N/D | N/D | No hay ejecución Ragas completa. |
 | context_recall | N/D | N/D | No hay ejecución Ragas completa. |
-| Abstención OOD | 3/3 preguntas OOD del dataset, sin contexto recuperado | Las pruebas unitarias verifican OOD y seguimiento ambiguo stateless; falta reevaluar todo el conjunto | Prueba funcional, no puntuación Ragas. |
+| Abstención OOD | 3/3 preguntas OOD del dataset, sin contexto recuperado | 3/3 preguntas OOD del conjunto vuelven a producir cero fragmentos en las regresiones | Prueba funcional, no puntuación Ragas. |
 
 Las ejecuciones previas del evaluador terminaron con `504 Deadline Exceeded`
 del servicio de Google; por tanto no existe una tabla numérica antes/después
