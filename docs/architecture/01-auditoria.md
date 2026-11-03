@@ -168,5 +168,26 @@ Esfuerzo en persona-semanas (PS) aproximado para implementación y verificación
 
 ## 11. Alcance y limitaciones de la inspección
 
-No se leyeron los cinco PDF del corpus ni `docs/entrega_avance2.pdf`; no se revisaron visualmente las capturas PNG. Del notebook `docs/base_conocimiento/flujo_rag_groq.ipynb` solo se conoció que existe, sin leer celdas. No se inspeccionó `.git/`, dependencias instaladas, logs de hosting, consola de Render, políticas de Groq/Google/Render ni configuración DNS. No se validó que las líneas 141/123 sigan vigentes para el contexto operativo. No se hizo evaluación de datos personales con usuarios ni verificación de licencias/autorizaciones del corpus. La referencia legal de Colombia se trata como marco para revisión institucional, no concepto jurídico.
+En la inspección inicial no se leyeron los cinco PDF ni `docs/entrega_avance2.pdf`, y no se revisaron visualmente las capturas PNG. Del notebook `docs/base_conocimiento/flujo_rag_groq.ipynb` solo se conoció que existía, sin leer celdas. No se inspeccionaron logs de hosting, consola de Render, políticas de Groq/Google/Render ni configuración DNS. No se validó que las líneas 141/123 sigan vigentes para el contexto operativo. No se hizo evaluación de datos personales con usuarios ni verificación de licencias/autorizaciones del corpus. La referencia legal de Colombia se trata como marco para revisión institucional, no concepto jurídico.
 
+## 12. Actualización de la Fase 2: documentos e ingestión
+
+El 2 de noviembre de 2026 se inspeccionaron con `pypdf` los cinco PDF
+versionados: 107 páginas en total, todas con texto extraíble y sin caracteres
+de reemplazo. No se requiere OCR. La extracción PDF conserva metadatos de
+página, aunque las tablas y el orden visual se serializan como texto lineal.
+No se generó Markdown porque no se encontró un beneficio que compense ese
+riesgo de aplanamiento; los PDF originales siguen siendo las fuentes canónicas.
+
+El archivo provisional `docs/base_conocimiento/guia_crianza.md` fue retirado
+del repositorio en el commit base. La ingestión ahora lo excluye explícitamente
+si reaparece con ese nombre, pero mantiene habilitados otros Markdown para
+posibles derivados. Se reconstruyó el índice local desde una carpeta limpia:
+620 chunks activos de los cinco PDF, cero registros de la guía y cero registros
+huérfanos. La suite completa pasó 20/20 pruebas.
+
+La comprobación funcional inicial también mostró límites que pertenecen a la
+fase de recuperación: la pregunta sobre conciliar el sueño se abstuvo, y una
+consulta sobre las reglas del grupo de cuidado recuperó evidencia de la página
+pertinente junto con pasajes adicionales de menor pertinencia. No se considera
+validada la precisión del RAG ni se ejecutaron métricas Ragas/Groq en esta fase.

@@ -7,8 +7,10 @@ from pypdf import PdfWriter
 
 from src.knowledge_base import (
     EXTENSIONES_ADMITIDAS,
+    FUENTES_EXCLUIDAS,
     SOLAPAMIENTO_FRAGMENTO,
     TAMANO_FRAGMENTO,
+    _archivos_admitidos,
     _leer_texto,
 )
 
@@ -21,6 +23,21 @@ class KnowledgeBaseLoaderTests(unittest.TestCase):
             EXTENSIONES_ADMITIDAS,
             {".pdf", ".docx", ".txt", ".md", ".html", ".htm"},
         )
+
+    def test_provisional_markdown_is_excluded_but_derived_markdown_is_allowed(self):
+        with TemporaryDirectory() as directorio:
+            raiz = Path(directorio)
+            (raiz / "guia_crianza.md").write_text(
+                "Contenido provisional.", encoding="utf-8"
+            )
+            (raiz / "34.md").write_text(
+                "# Documento derivado\nContenido extraído.", encoding="utf-8"
+            )
+
+            archivos = _archivos_admitidos(raiz)
+
+        self.assertEqual(FUENTES_EXCLUIDAS, {"guia_crianza.md"})
+        self.assertEqual([archivo.name for archivo in archivos], ["34.md"])
 
     def test_loaders_extract_text_and_location_metadata(self):
         with TemporaryDirectory() as directorio:

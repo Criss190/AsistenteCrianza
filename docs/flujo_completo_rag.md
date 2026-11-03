@@ -14,16 +14,14 @@ relación cuidador-niño, disciplina, corregulación y apoyo parental:
 | `04. (español) TBRI Empoderamiento participante.pdf` | Regulación, necesidades y preparación del niño. |
 | `34. Gomez Muzzio.pdf` | Artículo sobre psicoterapia infantil, apego y sensibilidad parental. |
 | `39.pdf` | Revisión sistemática sobre intervenciones digitales de apoyo parental. |
-| `guia_crianza.md` | Guía del proyecto para situaciones cotidianas de crianza. |
 
-El notebook `flujo_rag_groq.ipynb` se conserva como artefacto de desarrollo y
-no se indexa: no es una fuente primaria de orientación. El cargador también
-admite documentos PDF, DOCX, TXT, MD y HTML (`.html`/`.htm`) añadidos al
-directorio. Formatos que no estén en `EXTENSIONES_ADMITIDAS` se ignoran.
+El archivo provisional `guia_crianza.md` fue retirado del corpus y está
+excluido explícitamente por el cargador. El cargador mantiene soporte para
+PDF, DOCX, TXT, Markdown y HTML (`.html`/`.htm`), incluidos los Markdown que
+se generen como derivados de los PDF. Formatos no admitidos y la fuente
+provisional se ignoran.
 
-## 2. Diagrama del pipeline
-
-![Diagrama del flujo RAG](diagrama_flujo_rag.svg)
+## 2. Pipeline
 
 Pipeline durante el arranque:
 
@@ -58,6 +56,12 @@ Pipeline por turno:
 ### Extracción y metadatos
 
 - **PDF:** `pypdf` obtiene el texto página por página. Se guarda `page` desde 1.
+- **Estado verificado del corpus actual:** los cinco PDF contienen texto
+  seleccionable; las 107 páginas entregan texto con `pypdf` y no se detectaron
+  caracteres de reemplazo en la extracción. No se requiere OCR para estos
+  originales. La extracción conserva texto y página, pero tablas y parte del
+  orden visual se representan como texto lineal, por lo que la estructura debe
+  revisarse para los pasajes que dependan de tablas.
 - **DOCX:** `python-docx` extrae párrafos, títulos y tablas; se conserva
   `section`.
 - **HTML:** `HTMLParser` obtiene texto visible, excluye `head`, `script`,
@@ -78,6 +82,12 @@ reduce la pérdida de una definición o recomendación que cruza la frontera.
 `RecursiveCharacterTextSplitter` intenta separar por párrafo (`\n\n`), línea
 (`\n`), espacio y, como último recurso, carácter; esto conserva límites
 textuales más naturales que cortar a una longitud fija sin criterio.
+
+No se convirtieron los PDF a Markdown: todos tienen capa de texto y `pypdf`
+extrae las 107 páginas con metadatos de página. Una conversión no aporta una
+mejora demostrada y podría aplanar tablas u orden visual; los originales se
+mantienen como fuentes canónicas. Si una revisión posterior genera Markdown,
+el cargador lo admite y lo identifica como documento derivado.
 
 ### Vectorización e índice
 
@@ -118,16 +128,11 @@ la generación, el modo extractivo usa la evidencia ya recuperada.
 
 ## 4. Consultas observadas y análisis
 
-Las siguientes son evidencias de ejecución local en modo extractivo, no
-capturas de un despliegue público. Capturas guardadas:
-
-- [Respuesta citada sobre rabietas](captura_consulta_rabietas_local.png).
-- [Respuesta a un seguimiento](captura_seguimiento_local.png).
-- [Consulta fuera del dominio después de preguntas de crianza](captura_fuera_dominio_local.png).
-
 | Consulta | Comportamiento observado | Análisis |
 |---|---|---|
-| “Mi hijo hace rabietas cuando apago la televisión” | Respuesta local con un fragmento de `guia_crianza.md`, sección “Rabietas y límites”. | El fragmento citado respalda anticipar el límite y validar la emoción. |
+| “Mi hijo hace rabietas cuando apago la televisión” | La respuesta documentada anteriormente provenía de `guia_crianza.md`, ya retirado. | Es evidencia del corpus anterior; no se considera validación del corpus actual de cinco PDF. |
+| “¿Cuáles son las tres reglas para las relaciones utilizadas en el grupo de cuidado según TBRI?” | Se recuperan pasajes de `03. (español) TBRI Correccion participante.pdf`, página 12, junto con otros dos fragmentos. | Hay evidencia pertinente, pero también aparece un fragmento de otra página/tema; la precisión del Top-K requiere evaluación en la fase de recuperación. |
+| “¿Cómo puedo ayudar a un niño a conciliar el sueño?” | La búsqueda actual se abstiene y devuelve cero fuentes. | Es un resultado de recuperación, no prueba de que los PDF carezcan de contenido sobre descanso; debe investigarse en la fase de recuperación. |
 | “¿Y qué puedo hacer después para calmarlo?” sin repetir el tema | El sistema se abstiene y no muestra fuentes. | Se evita adivinar el tema a partir del historial del cliente; la pregunta debe incluir el asunto (por ejemplo, “durante una rabieta”). |
 | “¿Cuál es la velocidad orbital de satélites alrededor de Marte?” | El sistema se abstiene y no muestra fuentes. | La consulta OOD no hereda términos de crianza ni recibe citas irrelevantes. |
 
@@ -210,15 +215,9 @@ efímero, se reconstruye al arrancar.
 
 ## 7. Verificación del repositorio
 
-Con el corpus disponible, las 19 pruebas pasaron tras los cambios usando
-`unittest discover -s tests -v`. En una ejecución posterior, el directorio
-`docs/base_conocimiento/` y otros recursos documentales ya no estaban en el
-árbol; el resultado final fue 17/19, con fallos en health y recuperación local
-por ausencia de corpus. No se restauraron esos archivos porque su eliminación
-no formaba parte de esta tarea. `pytest` no está instalado. No se ejecutó Groq
-ni una evaluación Ragas externa, así que latencia, costo y métricas de calidad
-del proveedor siguen sin medir.
-
-Los cambios de esta revisión están en el árbol de trabajo local y aún deben
-subirse al repositorio antes de afirmar que el GitHub remoto contiene esta
-entrega.
+La Fase 2 pasó las 20 pruebas de `unittest discover -s tests -v`. El índice
+local limpio contiene 620 chunks de los cinco PDF: 96 de Conexión, 129 de
+Corrección, 108 de Empoderamiento, 144 de Gómez Muzzio y 143 de `39.pdf`.
+No contiene metadatos de `guia_crianza.md` ni registros huérfanos. El test de
+evaluación usa respuestas simuladas y no equivale a ejecutar Ragas. No se llamó
+a Groq ni a un juez externo; las métricas de calidad siguen pendientes.

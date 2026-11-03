@@ -24,7 +24,12 @@ class ChatAppTests(unittest.TestCase):
     def test_rag_returns_local_evidence_and_sources(self):
         response = self.client.post(
             "/chat",
-            json={"message": "Mi hijo hace rabietas cuando apago la television"},
+            json={
+                "message": (
+                    "¿Cuáles son las tres reglas para las relaciones "
+                    "utilizadas en el grupo de cuidado según TBRI?"
+                )
+            },
         )
 
         data = response.get_json()
@@ -33,7 +38,8 @@ class ChatAppTests(unittest.TestCase):
         self.assertEqual(data["respuesta"], data["answer"])
         self.assertEqual(data["fuentes"], data["sources"])
         self.assertTrue(data["sources"])
-        self.assertIn("rabietas", data["answer"].lower())
+        self.assertIn("tres reglas", data["answer"].lower())
+        self.assertNotEqual(data["sources"][0]["name"], "guia_crianza.md")
         self.assertTrue(data["sources"][0]["chunk_id"])
         self.assertTrue(data["sources"][0]["excerpt"])
 

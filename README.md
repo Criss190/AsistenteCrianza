@@ -23,25 +23,20 @@ flowchart LR
     J --> M
 ```
 
-El diseño, decisiones, limitaciones, evidencia y estado de evaluación se
-explican en [docs/flujo_completo_rag.md](docs/flujo_completo_rag.md). La
-entrega tiene también el [PDF](docs/entrega_avance2.pdf) y su fuente
-[HTML](docs/entrega_avance2.html); el diagrama está en
-[docs/diagrama_flujo_rag.svg](docs/diagrama_flujo_rag.svg). El informe
-distingue los resultados realmente medidos de los pendientes; no se estiman
-scores que Ragas no haya generado.
+La auditoría y requisitos están en
+[docs/architecture/01-auditoria.md](docs/architecture/01-auditoria.md) y
+[docs/architecture/02-requisitos-y-casos-de-uso.md](docs/architecture/02-requisitos-y-casos-de-uso.md).
+El detalle del pipeline, sus limitaciones y el estado de evaluación está en
+[docs/flujo_completo_rag.md](docs/flujo_completo_rag.md).
 
 ### Corpus
 
-El índice recorre `docs/base_conocimiento/` y procesa los documentos
-compatibles. El corpus versionado actual contiene los tres materiales de
-participante TBRI (Conexión, Corrección y Empoderamiento), el artículo de
-Gómez Muzzio sobre psicoterapia y apego, la revisión sistemática de
-intervenciones digitales de crianza y `guia_crianza.md`. Se seleccionaron
-porque cubren apego, interacción cuidador-niño, corregulación, disciplina y
-apoyo parental, directamente pertinentes a la orientación del asistente.
-El notebook `flujo_rag_groq.ipynb` es material de implementación, no fuente
-de conocimiento, y no se vectoriza.
+El corpus definitivo contiene cinco PDF: los tres materiales de participante
+TBRI (Conexión, Corrección y Empoderamiento), el artículo de Gómez Muzzio
+sobre psicoterapia y apego, y la revisión sistemática de intervenciones
+digitales de crianza. El Markdown provisional `guia_crianza.md` fue retirado
+y se excluye explícitamente de la ingestión; los PDF originales se conservan.
+Los documentos Markdown derivados de esos PDF siguen siendo formatos válidos.
 
 Los formatos aceptados son PDF, DOCX, TXT, Markdown y HTML (`.html`/`.htm`).
 PDF usa metadatos de página; DOCX/Markdown/HTML/TXT usan sección o nombre de

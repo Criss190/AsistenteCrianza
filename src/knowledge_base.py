@@ -19,6 +19,7 @@ from pypdf import PdfReader
 
 
 EXTENSIONES_ADMITIDAS = {".pdf", ".docx", ".txt", ".md", ".html", ".htm"}
+FUENTES_EXCLUIDAS = {"guia_crianza.md"}
 TAMANO_FRAGMENTO = 500
 SOLAPAMIENTO_FRAGMENTO = 50
 DISTANCIA_MAXIMA = 0.65
@@ -203,6 +204,17 @@ def _leer_texto(archivo: Path) -> list[tuple[str, dict[str, Any]]]:
     return [(texto, {"section": archivo.stem})]
 
 
+def _archivos_admitidos(directorio: Path) -> list[Path]:
+    """Lista documentos admitidos sin incorporar la guía provisional retirada."""
+    return sorted(
+        archivo
+        for archivo in directorio.rglob("*")
+        if archivo.is_file()
+        and archivo.suffix.lower() in EXTENSIONES_ADMITIDAS
+        and archivo.relative_to(directorio).as_posix() not in FUENTES_EXCLUIDAS
+    )
+
+
 class BaseConocimientoLocal:
     """Índice Chroma persistente construido desde documentos de conocimiento."""
 
@@ -247,11 +259,7 @@ class BaseConocimientoLocal:
         contenido_hash.update(
             f"{chunk_size}:{chunk_overlap}:{MODELO_EMBEDDINGS}".encode("utf-8")
         )
-        archivos = sorted(
-            archivo
-            for archivo in ruta.rglob("*")
-            if archivo.is_file() and archivo.suffix.lower() in EXTENSIONES_ADMITIDAS
-        )
+        archivos = _archivos_admitidos(ruta)
         for archivo in archivos:
             fuente = archivo.relative_to(ruta).as_posix()
             contenido_hash.update(fuente.encode("utf-8"))
