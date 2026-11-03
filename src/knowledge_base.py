@@ -93,6 +93,24 @@ _EXPANSIONES_INGLES = {
     "orientacion": "orientation",
     "guiado": "guided curriculum",
 }
+_EXPANSIONES_CRIANZA = (
+    (
+        re.compile(r"\b(golpe|golpea|golpeo|pega|pego|pegar|empuja|muerde)\w*\b"),
+        "cuando un niño tiene comportamiento desafiante abordar de inmediato",
+    ),
+    (
+        re.compile(r"\b(llora|llorar|llanto|frustrad\w*|rabieta|berrinche)\b"),
+        "sentimientos emociones autorregulación regular emociones",
+    ),
+    (
+        re.compile(r"\b(no me escucha|no escucha|no obedece|desobedece)\b"),
+        "prestar completa atención cuando el niño habla respetar opiniones dar opciones",
+    ),
+    (
+        re.compile(r"\b(sentirse seguro|sentirse segura|sentirse seguros|sensacion de seguridad)\b"),
+        "ambientes predecibles conexión adultos se preocupan regulación emocional",
+    ),
+)
 
 
 def _tokenizar_relevante(texto: str) -> list[str]:
@@ -475,11 +493,25 @@ class BaseConocimientoLocal:
         if not consulta.strip() or limite <= 0 or self._coleccion.count() == 0:
             return []
 
-        terminos_consulta = _terminos_relevantes(consulta)
+        consulta_normalizada = unicodedata.normalize("NFD", consulta.lower())
+        consulta_normalizada = "".join(
+            caracter
+            for caracter in consulta_normalizada
+            if unicodedata.category(caracter) != "Mn"
+        )
+        expansiones = [
+            expansion
+            for patron, expansion in _EXPANSIONES_CRIANZA
+            if patron.search(consulta_normalizada)
+        ]
+        consulta_expandida = " ".join([consulta, *expansiones])
+        terminos_consulta = _terminos_relevantes(consulta_expandida)
         if not terminos_consulta:
             return []
 
         consultas = [consulta]
+        if expansiones:
+            consultas.append(consulta_expandida)
         consulta_bilingue = _consulta_bilingue(terminos_consulta)
         if consulta_bilingue:
             consultas.append(consulta_bilingue)

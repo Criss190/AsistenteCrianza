@@ -43,6 +43,87 @@ class ChatAppTests(unittest.TestCase):
         self.assertTrue(data["sources"][0]["chunk_id"])
         self.assertTrue(data["sources"][0]["excerpt"])
 
+    def test_local_answer_joins_passage_and_cites_retrieved_page(self):
+        response = self.client.post(
+            "/chat",
+            json={
+                "message": (
+                    "¿Cuál es la diferencia entre rutinas y rituales "
+                    "a la hora de dormir?"
+                )
+            },
+        )
+
+        data = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["mode"], "local")
+        self.assertIn("parte favorita del día.", data["answer"])
+        self.assertIn("un ritual añade conexión", data["answer"])
+        self.assertNotIn("ilustrar la diferencia", data["answer"])
+        self.assertRegex(data["answer"], r"\[Fuentes? [0-9, ]+\]")
+        self.assertTrue(data["sources"])
+        self.assertTrue(
+            all(
+                source["name"].startswith("04.") and source["page"] == 20
+                for source in data["sources"]
+            )
+        )
+
+    def test_child_hitting_parent_is_not_mislabeled_as_abuse_disclosure(self):
+        response = self.client.post(
+            "/chat",
+            json={"message": "Mi hijo me golpeó cuando le daba la comida"},
+        )
+
+        data = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["mode"], "local")
+        self.assertIn("conducta desafiante", data["answer"])
+        self.assertNotIn("141", data["answer"])
+        self.assertTrue(
+            any(source["page"] == 19 for source in data["sources"])
+        )
+
+    def test_everyday_parenting_concerns_receive_short_evidence_synthesis(self):
+        cases = [
+            (
+                "Mi hijo ya no me escucha",
+                "prestarle atención completa",
+                17,
+            ),
+            (
+                "Estoy frustrada porque mi hijo llora mucho",
+                "no describen una técnica específica para el llanto",
+                17,
+            ),
+            (
+                "¿Cómo ayudo a los niños bajo mi cuidado a sentirse seguros?",
+                "ambientes predecibles",
+                7,
+            ),
+        ]
+
+        for pregunta, frase_esperada, pagina in cases:
+            with self.subTest(pregunta=pregunta):
+                data = self.client.post(
+                    "/chat", json={"message": pregunta}
+                ).get_json()
+                self.assertEqual(data["mode"], "local")
+                self.assertIn(frase_esperada, data["answer"])
+                self.assertNotIn(pregunta.lower(), data["answer"].lower())
+                self.assertTrue(
+                    any(source["page"] == pagina for source in data["sources"])
+                )
+
+    def test_explicit_child_abuse_disclosure_still_uses_safety_response(self):
+        response = self.client.post(
+            "/chat", json={"message": "Mi niño fue abusado, ¿qué puedo hacer?"}
+        )
+
+        data = response.get_json()
+        self.assertEqual(data["mode"], "safety")
+        self.assertIn("141", data["answer"])
+
     def test_chat_ignores_history_and_answers_the_current_turn_only(self):
         response = self.client.post(
             "/chat",

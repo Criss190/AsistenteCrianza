@@ -66,7 +66,13 @@ function addAssistantMessage(result) {
   const name = document.createElement('strong');
   name.textContent = 'CrianzApp';
   const subtitle = document.createElement('span');
-  subtitle.textContent = result.mode === 'groq' ? 'orientación generada con IA' : 'orientación basada en la guía';
+  const subtitles = {
+    groq: 'respuesta sintetizada con IA y basada en fuentes',
+    local: 'resumen local basado en fuentes',
+    safety: 'orientación prioritaria de seguridad',
+    no_evidence: 'sin evidencia suficiente en la guía',
+  };
+  subtitle.textContent = subtitles[result.mode] || 'orientación basada en fuentes';
   meta.append(name, subtitle);
 
   const bubble = document.createElement('div');
@@ -82,13 +88,13 @@ function addAssistantMessage(result) {
     const summary = document.createElement('summary');
     summary.textContent = `Fuentes consultadas (${sources.length})`;
     details.append(summary);
-    sources.forEach((source) => {
+    sources.forEach((source, index) => {
       const item = document.createElement('div');
       item.className = 'source-item';
       const sourceName = document.createElement('strong');
       const location = source.page ? ` · página ${source.page}` : '';
       const section = source.section ? ` · ${source.section}` : '';
-      sourceName.textContent = `${source.name || source.source || 'Guía local'}${location}${section}`;
+      sourceName.textContent = `[Fuente ${index + 1}] ${source.name || source.source || 'Guía local'}${location}${section}`;
       const excerpt = document.createElement('p');
       excerpt.textContent = source.excerpt || source.fragment || '';
       item.append(sourceName, excerpt);

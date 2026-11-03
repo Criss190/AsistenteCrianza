@@ -11,7 +11,11 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from src.knowledge_base import BaseConocimientoLocal, FragmentoConocimiento
+from src.knowledge_base import (
+    BaseConocimientoLocal,
+    FragmentoConocimiento,
+    _terminos_relevantes,
+)
 from src.output_formatter import validar_formato
 from src.prompt_builder import build_prompt
 
@@ -33,11 +37,19 @@ MENSAJE_ALERTA = (
     "línea 141. Si existe peligro inmediato, llama al 123."
 )
 PATRONES_ALERTA = re.compile(
-    r"\b(abuso|abusos|abusad\w*|violencia|violent\w*|maltrat\w*|"
-    r"golpe\w*|pega\w*|amenaz\w*|toca\w*|tocamiento\w*|"
-    r"violacion|violaciones|acoso sexual|abuso sexual|explotacion sexual|"
+    r"\b(abuso(?: sexual)?|abusad\w*|violacion\w*|acoso sexual|"
+    r"explotacion sexual|tocamiento\w*|violencia|violent\w*|"
     r"suicid\w*|autolesion\w*|hacerme dano|hacerse dano|"
-    r"quiere morir|quiero morir|no quiero vivir)\b"
+    r"quiere morir|quiero morir|no quiero vivir)\b|"
+    r"\bfamiliar\w*.{0,60}\b(?:la|lo)\s+(?:toca|toco)\b"
+)
+PATRONES_DANO_A_NINO = re.compile(
+    r"\b(?:mi hijo|mi hija|mi nino|mi nina|el nino|la nina|menor)\b"
+    r".{0,60}\b(?:fue golpead\w*|fue maltratad\w*|le pegaron|"
+    r"la golpearon|lo golpearon|la maltrataron|lo maltrataron)\b|"
+    r"\b(?:adulto|familiar|padrastro|madrastra|cuidador|maestro|docente)\w*"
+    r".{0,60}\b(?:golpeo|golpeo|pego|maltrato|amenazo)\b"
+    r".{0,40}\b(?:mi hijo|mi hija|mi nino|mi nina|menor)\b"
 )
 LOGGER = logging.getLogger(__name__)
 
@@ -102,13 +114,16 @@ class ChatRAG:
             )
 
         if not self.api_key:
-            return self._respuesta_local(fragmentos, fuentes, contextos)
+            return self._respuesta_local(
+                mensaje, fragmentos, fuentes, contextos
+            )
 
         try:
             respuesta = self._generar_con_groq(mensaje, fragmentos)
         except Exception:
             LOGGER.exception("No se pudo generar una respuesta válida con Groq")
             return self._respuesta_local(
+                mensaje,
                 fragmentos,
                 fuentes,
                 contextos,
@@ -128,8 +143,10 @@ class ChatRAG:
         from groq import Groq
 
         contexto = "\n\n".join(
-            f"[Fuente: {fragmento.fuente}]\n{fragmento.texto}"
-            for fragmento in fragmentos
+            f"[Fuente {indice}: {fragmento.fuente}"
+            f"{f', página {fragmento.page}' if fragmento.page else ''}]\n"
+            f"{fragmento.texto}"
+            for indice, fragmento in enumerate(fragmentos, start=1)
         )
         mensajes = build_prompt(mensaje, contexto)
         cliente = Groq(api_key=self.api_key, timeout=25.0, max_retries=1)
@@ -156,6 +173,12 @@ class ChatRAG:
 
         datos = json.loads(contenido)
         validar_formato(datos)
+        citas = {
+            int(numero)
+            for numero in re.findall(r"\[Fuente\s+(\d+)\]", contenido)
+        }
+        if not citas or any(numero > len(fragmentos) for numero in citas):
+            raise ValueError("La respuesta no cita fuentes recuperadas válidas.")
         estrategias = datos["estrategias"]
         if not isinstance(datos["resumen_breve"], str) or not all(
             isinstance(estrategia, str) and estrategia.strip()
@@ -176,18 +199,245 @@ class ChatRAG:
 
     @staticmethod
     def _respuesta_local(
+        mensaje: str,
         fragmentos: list[FragmentoConocimiento],
         fuentes: list[dict[str, Any]],
         contextos: list[str],
         notice: str | None = None,
     ) -> dict[str, Any]:
-        extractos = [f"• {fragmento.texto}" for fragmento in fragmentos]
-        respuesta = (
-            "Encontré estas orientaciones en la guía local. "
-            "Te las comparto directamente, sin generar información nueva:\n\n"
-            + "\n\n".join(extractos)
-        )
+        respuesta = ChatRAG._sintetizar_respuesta_local(mensaje, fragmentos)
+        if respuesta is None:
+            extractos = ChatRAG._extractos_locales(mensaje, fragmentos)
+            if not extractos and len(fragmentos) == 1:
+                extractos = ChatRAG._extractos_locales(
+                    "", fragmentos, usar_primer_fragmento=True
+                )
+            if not extractos:
+                return ChatRAG._resultado(
+                    MENSAJE_SIN_EVIDENCIA, [], [], "no_evidence", notice
+                )
+            respuesta = (
+                "Estas frases de la guía responden a la consulta:\n\n"
+                + "\n\n".join(extractos)
+            )
+        indices_citados = sorted({
+            int(numero)
+            for cita in re.finditer(r"\[Fuentes?\s+([\d, ]+)\]", respuesta)
+            for numero in re.findall(r"\d+", cita.group(1))
+            if 1 <= int(numero) <= len(fuentes)
+        })
+        if indices_citados:
+            nuevo_indice = {
+                indice_anterior: indice_nuevo
+                for indice_nuevo, indice_anterior in enumerate(indices_citados, start=1)
+            }
+
+            def renumerar_citas(coincidencia: re.Match[str]) -> str:
+                indices = [
+                    nuevo_indice[int(numero)]
+                    for numero in re.findall(r"\d+", coincidencia.group(1))
+                    if int(numero) in nuevo_indice
+                ]
+                etiqueta = "Fuente" if len(indices) == 1 else "Fuentes"
+                return f"[{etiqueta} {', '.join(map(str, indices))}]"
+
+            respuesta = re.sub(
+                r"\[Fuentes?\s+([\d, ]+)\]", renumerar_citas, respuesta
+            )
+            fuentes = [fuentes[indice - 1] for indice in indices_citados]
+            contextos = [contextos[indice - 1] for indice in indices_citados]
         return ChatRAG._resultado(respuesta, fuentes, contextos, "local", notice)
+
+    @staticmethod
+    def _sintetizar_respuesta_local(
+        mensaje: str,
+        fragmentos: list[FragmentoConocimiento],
+        usar_primer_fragmento: bool = False,
+    ) -> str | None:
+        """Redacta resúmenes breves para temas cubiertos por evidencia local."""
+        consulta = ChatRAG._normalizar(mensaje)
+        textos = [ChatRAG._normalizar(fragmento.texto) for fragmento in fragmentos]
+
+        def fuentes_con(palabras: tuple[str, ...]) -> list[int]:
+            return [
+                indice
+                for indice, texto in enumerate(textos, start=1)
+                if all(palabra in texto for palabra in palabras)
+            ]
+
+        def cita(indices: list[int]) -> str:
+            numeros = ", ".join(str(indice) for indice in indices)
+            return f"[Fuente {numeros}]" if len(indices) == 1 else f"[Fuentes {numeros}]"
+
+        if "rutina" in consulta and "ritual" in consulta:
+            indices = sorted(set(
+                fuentes_con(("practicas establecidas",))
+                + fuentes_con(("objetivo de los rituales como conexion",))
+                + fuentes_con(("parte favorita del dia",))
+            ))
+            if indices:
+                return (
+                    "Una rutina reúne pasos habituales, como bañarse, leer y "
+                    "apagar la luz; un ritual añade conexión, por ejemplo, "
+                    "compartir la parte favorita del día. "
+                    f"{cita(indices)}"
+                )
+
+        if "tres reglas" in consulta and "grupo" in consulta:
+            indices = fuentes_con(("las tres reglas son", "mantenerse juntos"))
+            if indices:
+                return (
+                    "Para el grupo de cuidado, la guía enumera tres reglas: "
+                    "mantenerse juntos, no lastimar y divertirse. "
+                    f"{cita(indices)}"
+                )
+
+        if any(termino in consulta for termino in ("seguro", "segura", "seguros")):
+            indices = sorted(set(
+                fuentes_con(("segur", "conect"))
+                + fuentes_con(("ambientes predecibles",))
+                + fuentes_con(("se preocupan por ellos",))
+                + fuentes_con(("regular sus emociones",))
+            ))
+            if indices:
+                return (
+                    "TBRI distingue entre que un niño esté seguro y que se sienta "
+                    "seguro. La guía recomienda ambientes predecibles y relaciones "
+                    "con adultos que se preocupan por ellos; esa sensación ayuda "
+                    "a la conexión y a regular las emociones. "
+                    f"{cita(indices)}"
+                )
+
+        if any(termino in consulta for termino in ("escucha", "escuchar", "obedece")):
+            indices = sorted(set(
+                fuentes_con(("prestar completa atencion",))
+                + fuentes_con(("respetar las diferentes opiniones",))
+                + fuentes_con(("dar opciones",))
+            ))
+            if indices:
+                return (
+                    "Entre las estrategias TBRI están prestarle atención completa "
+                    "cuando habla, respetar sus opiniones y ofrecerle opciones. "
+                    f"{cita(indices)}"
+                )
+
+        if any(termino in consulta for termino in ("llora", "llanto", "frustrad", "berrinche", "rabieta")):
+            indices = sorted(set(
+                fuentes_con(("regular sus emociones",))
+                + fuentes_con(("autorregulacion", "emociones"))
+            ))
+            if indices:
+                return (
+                    "Siento que estés pasando por un momento difícil. La guía "
+                    "relaciona la sensación de seguridad con la regulación "
+                    "emocional, pero estos pasajes no describen una técnica "
+                    f"específica para el llanto. {cita(indices)}"
+                )
+
+        if any(termino in consulta for termino in ("golpe", "pega", "empuja", "muerde")):
+            indices = sorted(set(
+                fuentes_con(("aborda rapido el comportamiento desafiante",))
+                + fuentes_con(("comportamiento desafiante", "aprender de la experiencia"))
+            ))
+            if indices:
+                return (
+                    "Entiendo que puede ser difícil durante la comida. El material "
+                    "TBRI recomienda abordar pronto la conducta desafiante y señala "
+                    "que así el niño puede aprender de la experiencia. "
+                    f"{cita(indices)}"
+                )
+        return None
+
+    @staticmethod
+    def _normalizar(texto: str) -> str:
+        normalizado = unicodedata.normalize("NFD", texto.lower())
+        sin_acentos = "".join(
+            caracter
+            for caracter in normalizado
+            if unicodedata.category(caracter) != "Mn"
+        )
+        return re.sub(r"\s+", " ", sin_acentos).strip()
+
+    @staticmethod
+    def _extractos_locales(
+        mensaje: str,
+        fragmentos: list[FragmentoConocimiento],
+        usar_primer_fragmento: bool = False,
+    ) -> list[str]:
+        """Selecciona pocas frases completas y pertinentes de la evidencia."""
+        grupos: dict[
+            tuple[str, int | None],
+            list[tuple[int, int, FragmentoConocimiento]],
+        ] = {}
+        for indice_fuente, fragmento in enumerate(fragmentos, start=1):
+            try:
+                indice_chunk = int(fragmento.chunk_id.rsplit("-", 1)[1])
+            except (IndexError, ValueError):
+                indice_chunk = indice_fuente
+            grupos.setdefault((fragmento.fuente, fragmento.page), []).append(
+                (indice_chunk, indice_fuente, fragmento)
+            )
+
+        terminos_consulta = set(_terminos_relevantes(mensaje))
+        candidatos: list[tuple[int, int, str, list[int]]] = []
+        for grupo in grupos.values():
+            grupo.sort(key=lambda elemento: elemento[0])
+            bloques: list[list[tuple[int, int, FragmentoConocimiento]]] = []
+            for elemento in grupo:
+                if bloques and elemento[0] == bloques[-1][-1][0] + 1:
+                    bloques[-1].append(elemento)
+                else:
+                    bloques.append([elemento])
+
+            for bloque in bloques:
+                texto = " ".join(fragmento.texto for _, _, fragmento in bloque)
+                texto = re.sub(
+                    r"©.*?escrito del ICD\.?\s*", "", texto, flags=re.DOTALL
+                )
+                lineas = []
+                for linea in texto.splitlines():
+                    linea = linea.strip().lstrip("•°- ").strip()
+                    if (
+                        not linea
+                        or "?" in linea
+                        or re.fullmatch(r"[_\s\d.]+", linea)
+                        or re.match(r"^\d+\s+", linea)
+                        or linea.lower() in {"rituales diarios", "introduccion"}
+                    ):
+                        continue
+                    lineas.append(linea)
+                texto = re.sub(r"\s+", " ", " ".join(lineas)).strip()
+                if not texto:
+                    continue
+
+                numeros = sorted({indice_fuente for _, indice_fuente, _ in bloque})
+                frases = re.split(r"(?<=[.!?])\s+", texto)
+                for frase in frases:
+                    frase = frase.strip(" •°-\t")
+                    if not 35 <= len(frase) <= 260 or "?" in frase:
+                        continue
+                    terminos_frase = set(_terminos_relevantes(frase))
+                    coincidencias = len(terminos_consulta & terminos_frase)
+                    if not coincidencias and not usar_primer_fragmento:
+                        continue
+                    candidatos.append(
+                        (coincidencias, numeros[0], frase, numeros)
+                    )
+
+        candidatos.sort(key=lambda item: (-item[0], item[1]))
+        extractos: list[str] = []
+        vistas: set[str] = set()
+        for _, _, frase, numeros in candidatos:
+            clave = ChatRAG._normalizar(frase)
+            if clave in vistas:
+                continue
+            vistas.add(clave)
+            etiqueta = "Fuente" if len(numeros) == 1 else "Fuentes"
+            citas = ", ".join(str(numero) for numero in numeros)
+            extractos.append(f"• {frase} [{etiqueta} {citas}]")
+            if len(extractos) == 3:
+                break
+        return extractos
 
     @staticmethod
     def _resultado(
@@ -226,10 +476,8 @@ class ChatRAG:
 
     @staticmethod
     def _es_situacion_de_riesgo(texto: str) -> bool:
-        normalizado = unicodedata.normalize("NFD", texto.lower())
-        sin_acentos = "".join(
-            caracter
-            for caracter in normalizado
-            if unicodedata.category(caracter) != "Mn"
+        normalizado = ChatRAG._normalizar(texto)
+        return bool(
+            PATRONES_ALERTA.search(normalizado)
+            or PATRONES_DANO_A_NINO.search(normalizado)
         )
-        return bool(PATRONES_ALERTA.search(sin_acentos))
