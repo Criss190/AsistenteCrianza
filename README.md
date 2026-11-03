@@ -52,8 +52,9 @@ La búsqueda obtiene candidatos por similitud coseno; se conservan hasta tres
 fragmentos que cumplan distancia máxima 0.65 y un solapamiento léxico mínimo
 con la consulta actual. El historial visual no se envía al backend ni al LLM;
 formula cada seguimiento incluyendo el tema para evitar mezclar asuntos y
-reducir datos/tokens transmitidos. Sin evidencia aceptable, la respuesta es:
-“No dispongo de esa información en la base de conocimientos”.
+reducir datos/tokens transmitidos. Sin evidencia aceptable, el asistente explica
+que su especialidad es la crianza responsable y que no encontró información
+suficiente para responder con seguridad.
 
 ## Instalación y ejecución
 

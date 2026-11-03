@@ -23,6 +23,15 @@ class PromptAndFormatTests(unittest.TestCase):
         self.assertEqual(messages[-1]["role"], "user")
         self.assertEqual(payload, {"pregunta": question, "evidencia": evidence})
 
+    def test_system_prompt_enforces_scope_and_evidence_relevance(self):
+        system_prompt = build_prompt("¿Qué hago?", "Evidencia local.")[0][
+            "content"
+        ].lower()
+        system_prompt = " ".join(system_prompt.split())
+
+        self.assertIn("fuera de la crianza responsable", system_prompt)
+        self.assertIn("una coincidencia de palabras no basta", system_prompt)
+
     def test_validator_rejects_follow_up_questions_and_too_many_strategies(self):
         answer = {
             "resumen_breve": "¿Puedes contarme más?",

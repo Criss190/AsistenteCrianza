@@ -151,12 +151,12 @@ def generar_respuesta_local(contexto: str, pregunta: str, fragmentos: list) -> d
     else:
         respuesta = {
             "resumen_breve": (
-                "No encontré información suficiente en la base de "
-                "conocimiento local para responder con seguridad."
+                "Mi especialidad es la crianza responsable, pero no encontré "
+                "información suficiente en la base local para responder con seguridad."
             ),
             "estrategias": [
-                "Reformula la pregunta con términos más específicos.",
-                "Consulta una fuente profesional relacionada con tu situación.",
+                "Haz una consulta relacionada con crianza responsable.",
+                "Para una orientación específica, consulta a un profesional.",
             ],
             "senal_alerta": None,
             "derivar_a_profesional": False,

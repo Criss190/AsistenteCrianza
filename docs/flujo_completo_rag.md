@@ -41,9 +41,12 @@ Pipeline por turno:
    preguntas anteriores ni se transmiten al proveedor.
 3. Buscar similitud coseno en Chroma y reranquear los fragmentos con una
    combinación de similitud semántica y BM25. Aplicar el umbral de distancia
-   máxima `0.65`, verificar soporte léxico y devolver hasta tres fragmentos.
+   máxima `0.65`, exigir soporte léxico pertinente y devolver hasta tres
+   fragmentos; una edad expresada en años no justifica una coincidencia por sí sola.
 4. Ante señales de abuso, violencia o autolesión, priorizar orientación de
-   seguridad. Sin fragmentos aceptables, abstenerse explícitamente.
+   seguridad. Sin fragmentos aceptables, explicar el límite de especialidad
+   (crianza responsable) y que no hay información suficiente para responder
+   con seguridad.
 5. Con evidencia y `GROQ_API_KEY`, enviar mensajes por roles con consulta y
    evidencia serializadas como JSON, generar hasta 350 tokens y validar el
    contrato. Si el proveedor falla o la salida no valida, presentar extractos
@@ -131,7 +134,9 @@ se verifican con regresiones, no son una calibración estadística.
 actual. Pregunta y evidencia se codifican como JSON, no se interpolan en
 delimitadores textuales. Los ejemplos son breves, citan la evidencia de
 entrada y no recomiendan acciones sin respaldo. El system prompt pide una
-respuesta directa sin preguntas de seguimiento, de 1–3 pasos concretos.
+respuesta directa sin preguntas de seguimiento, de 1–3 pasos concretos,
+delimita la especialidad a crianza responsable y exige pertinencia semántica:
+una coincidencia de palabras no basta para usar un fragmento.
 Groq (`GROQ_MODEL`, predeterminado `openai/gpt-oss-120b`) redacta con
 temperatura `0.2`, JSON mode y límite de 350 tokens; `output_formatter.py`
 valida claves, longitudes, cantidad de pasos y ausencia de preguntas. Si falla
@@ -146,6 +151,7 @@ la generación, el modo extractivo usa la evidencia ya recuperada.
 | “¿Cómo puedo ayudar a un niño a conciliar el sueño?” | La búsqueda híbrida devuelve el ejemplo de rutina para dormir de `04. (español) TBRI Empoderamiento participante.pdf`, página 20. | Cuatro paráfrasis de sueño recuperan la página 20 y excluyen los fragmentos de horarios que contienen alimentos/hidratación. |
 | “¿Y qué puedo hacer después para calmarlo?” sin repetir el tema | El sistema se abstiene y no muestra fuentes. | Se evita adivinar el tema a partir del historial del cliente; la pregunta debe incluir el asunto (por ejemplo, “durante una rabieta”). |
 | “¿Cuál es la velocidad orbital de satélites alrededor de Marte?” | El sistema se abstiene y no muestra fuentes. | La consulta OOD no hereda términos de crianza ni recibe citas irrelevantes. |
+| “¿Qué vacuna necesita un niño de tres años?” o “... de 3 años” | El sistema se abstiene, no muestra fuentes y explica que no tiene información suficiente sobre ese tema. | Una referencia de edad no es evidencia pertinente; se evita el falso positivo de una mención documental incidental a “tres años”. |
 
 El historial se retiró del camino de recuperación porque la heurística de
 seguimiento no puede distinguir de forma fiable una referencia ambigua y

@@ -62,8 +62,10 @@ class ChatAppTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json()["mode"], "no_evidence")
-        self.assertEqual(response.get_json()["fuentes"], [])
+        data = response.get_json()
+        self.assertEqual(data["mode"], "no_evidence")
+        self.assertEqual(data["fuentes"], [])
+        self.assertIn("crianza responsable", data["answer"].lower())
 
     def test_follow_up_without_topic_context_abstains_instead_of_guessing(self):
         response = self.client.post(
@@ -84,6 +86,19 @@ class ChatAppTests(unittest.TestCase):
         )
 
         self.assertEqual(response.get_json()["mode"], "no_evidence")
+
+    def test_undocumented_parenting_question_abstains_with_scope_message(self):
+        response = self.client.post(
+            "/chat",
+            json={"message": "¿Qué vacuna necesita un niño de tres años?"},
+        )
+
+        data = response.get_json()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["mode"], "no_evidence")
+        self.assertEqual(data["sources"], [])
+        self.assertIn("crianza responsable", data["answer"].lower())
+        self.assertIn("información suficiente", data["answer"].lower())
 
     def test_new_out_of_domain_topic_does_not_reuse_previous_domain_history(self):
         response = self.client.post(

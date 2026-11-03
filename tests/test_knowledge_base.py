@@ -229,6 +229,18 @@ class KnowledgeBaseRetrievalTests(unittest.TestCase):
             with self.subTest(consulta=consulta):
                 self.assertEqual(self.base.buscar(consulta), [])
 
+    def test_undocumented_vaccine_questions_do_not_match_age_mentions(self):
+        consultas = [
+            "¿Qué vacuna necesita un niño de tres años?",
+            "¿Qué vacuna necesita un niño de 3 años?",
+            "¿Qué vacuna necesita un niño de cuatro años?",
+            "¿Qué vacuna necesita un niño de 4 años?",
+        ]
+
+        for consulta in consultas:
+            with self.subTest(consulta=consulta):
+                self.assertEqual(self.base.buscar(consulta), [])
+
 
 if __name__ == "__main__":
     unittest.main()

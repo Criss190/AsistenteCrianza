@@ -21,8 +21,9 @@ BASE_CONOCIMIENTO_DIR = (
 )
 MODELO_GROQ_PREDETERMINADO = "openai/gpt-oss-120b"
 MENSAJE_SIN_EVIDENCIA = (
-    "No dispongo de esa información en la base de conocimientos. "
-    "Puedes reformular la pregunta o consultar a un profesional relacionado."
+    "Mi especialidad es la crianza responsable y no encontré información "
+    "suficiente en la base de conocimientos para responder con seguridad. "
+    "Si tienes una consulta relacionada con crianza, puedo ayudarte."
 )
 MENSAJE_ALERTA = (
     "Gracias por contarlo. La seguridad del niño o la niña es lo primero. "

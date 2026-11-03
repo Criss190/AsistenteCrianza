@@ -42,6 +42,7 @@ PALABRAS_VACIAS = {
     "los", "me", "mi", "mis", "o", "para", "pero", "por", "primer", "que",
     "se", "segun", "si", "son", "su", "sus", "tener", "un", "una", "y", "yo",
     "puedo", "puede", "debo", "deberia", "quiero", "ser", "fue", "dos",
+    "ano",
     "articulo", "evidencia", "durante", "actual", "frente",
     "importante", "tan", "ayudar", "ayudame", "hago", "hace", "haces",
     "tiene", "tienen", "hacerlo", "hacerle", "conciliar", "implementar",
@@ -101,6 +102,12 @@ def _tokenizar_relevante(texto: str) -> list[str]:
         caracter
         for caracter in normalizado
         if unicodedata.category(caracter) != "Mn"
+    )
+    sin_acentos = re.sub(
+        r"\b(?:\d+|uno|una|un|dos|tres|cuatro|cinco|seis|"
+        r"siete|ocho|nueve|diez)\s+anos?\b",
+        " ",
+        sin_acentos,
     )
     terminos: list[str] = []
     for token in re.findall(r"[a-z0-9]+", sin_acentos):
