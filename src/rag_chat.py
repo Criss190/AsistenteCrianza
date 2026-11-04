@@ -14,9 +14,12 @@ from typing import Any
 from src.knowledge_base import (
     BaseConocimientoLocal,
     FragmentoConocimiento,
+    SOLAPAMIENTO_FRAGMENTO,
+    TAMANO_FRAGMENTO,
+    _expandir_consulta,
     _terminos_relevantes,
 )
-from src.output_formatter import validar_formato
+from src.output_formatter import limpiar_texto_modelo, validar_formato
 from src.prompt_builder import build_prompt
 
 
@@ -24,10 +27,18 @@ BASE_CONOCIMIENTO_DIR = (
     Path(__file__).resolve().parent.parent / "docs" / "base_conocimiento"
 )
 MODELO_GROQ_PREDETERMINADO = "openai/gpt-oss-120b"
+TOP_K_PREDETERMINADO = 4
+MAX_TOKENS_RESPUESTA = 2500  # los modelos de razonamiento gastan parte en pensar
+INTENTOS_GENERACION = 2
+
 MENSAJE_SIN_EVIDENCIA = (
     "Mi especialidad es la crianza responsable y no encontré información "
-    "suficiente en la base de conocimientos para responder con seguridad. "
-    "Si tienes una consulta relacionada con crianza, puedo ayudarte."
+    "suficiente en la guía para responder esto con seguridad. La guía trata "
+    "sobre crianza basada en la confianza (TBRI): conexión y apego, regulación "
+    "del cuerpo y las emociones (hidratación, alimentación, sentidos, "
+    "transiciones, rituales) y corrección respetuosa de la conducta. Si tu "
+    "consulta es de crianza, intenta contarme la situación con otras palabras; "
+    "para temas médicos, de salud mental o legales, consulta a un profesional."
 )
 MENSAJE_ALERTA = (
     "Gracias por contarlo. La seguridad del niño o la niña es lo primero. "
@@ -36,35 +47,85 @@ MENSAJE_ALERTA = (
     "protección infantil de inmediato; en Colombia puedes llamar al ICBF, "
     "línea 141. Si existe peligro inmediato, llama al 123."
 )
-PATRONES_ALERTA = re.compile(
+MENSAJE_AUTOLESION = (
+    "Gracias por contarlo; lo que se siente importa y no tienes que "
+    "enfrentarlo a solas. Si hay peligro inmediato, llama al 123. En Colombia "
+    "también puedes hablar ahora con la Línea 106, gratuita, confidencial y "
+    "disponible las 24 horas, con profesionales de salud mental. Si se trata "
+    "de tu hijo o hija, quédate a su lado, escúchale sin juzgar, retira lo que "
+    "pueda usar para hacerse daño y busca atención de salud mental cuanto antes."
+)
+MENSAJE_RIESGO_ADULTO = (
+    "Gracias por decirlo con honestidad: frenar a tiempo es lo más protector "
+    "que puedes hacer. Asegúrate de que el niño o la niña esté en un lugar "
+    "seguro, aléjate unos minutos a otro espacio, respira despacio y toma "
+    "agua. Si puedes, pide a otro adulto que se quede con él o ella. En "
+    "Colombia, la Línea 106 (gratuita, confidencial, 24 horas) te acompaña en "
+    "ese momento; si hay peligro inmediato, llama al 123. La línea 141 del "
+    "ICBF orienta a las familias sobre protección y crianza."
+)
+PATRONES_ABUSO = re.compile(
     r"\b(abuso(?: sexual)?|abusad\w*|violacion\w*|acoso sexual|"
-    r"explotacion sexual|tocamiento\w*|violencia|violent\w*|"
-    r"suicid\w*|autolesion\w*|hacerme dano|hacerse dano|"
-    r"quiere morir|quiero morir|no quiero vivir)\b|"
+    r"explotacion sexual|tocamiento\w*|maltrato infantil|"
+    r"violencia (?:intrafamiliar|domestica|sexual|familiar|en casa))\b|"
     r"\bfamiliar\w*.{0,60}\b(?:la|lo)\s+(?:toca|toco)\b"
+)
+PATRONES_AUTOLESION = re.compile(
+    r"\b(suicid\w*|autolesion\w*|hacerme dano|hacerse dano|quiere morir|"
+    r"quiero morir|no quiero vivir|quitarme la vida|quitarse la vida|"
+    r"matarme|matarse|cortarme las venas)\b"
+)
+PATRONES_RIESGO_ADULTO = re.compile(
+    r"\b(?:ganas de|voy a|temo|me da miedo|miedo de|siento que (?:le )?voy a|"
+    r"no puedo evitar|no me controlo|podria)\b.{0,50}"
+    r"\b(?:hacerle dano|lastimarl[oae]|golpearl[oae]|pegarle|matarl[oae])\b"
 )
 PATRONES_DANO_A_NINO = re.compile(
     r"\b(?:mi hijo|mi hija|mi nino|mi nina|el nino|la nina|menor)\b"
     r".{0,60}\b(?:fue golpead\w*|fue maltratad\w*|le pegaron|"
     r"la golpearon|lo golpearon|la maltrataron|lo maltrataron)\b|"
     r"\b(?:adulto|familiar|padrastro|madrastra|cuidador|maestro|docente)\w*"
-    r".{0,60}\b(?:golpeo|golpeo|pego|maltrato|amenazo)\b"
+    r".{0,60}\b(?:golpeo|pego|maltrato|amenazo)\b"
     r".{0,40}\b(?:mi hijo|mi hija|mi nino|mi nina|menor)\b"
+)
+EJERCICIO_DE_LIBRO = re.compile(
+    r"^(?:piense|reflexione|mire|complete|llene|escriba|analice|anote|"
+    r"considere|imagine|pregunte)\b",
+    re.IGNORECASE,
 )
 LOGGER = logging.getLogger(__name__)
 
 
+def _entero_entorno(nombre: str, predeterminado: int) -> int:
+    valor = os.getenv(nombre, "").strip()
+    if not valor:
+        return predeterminado
+    try:
+        entero = int(valor)
+    except ValueError:
+        LOGGER.warning("%s debe ser un entero; se usa %s.", nombre, predeterminado)
+        return predeterminado
+    return entero if entero > 0 else predeterminado
+
+
 class ChatRAG:
-    """Combina Chroma, el prompt de CrianzApp y Groq si hay una clave."""
+    """Combina la búsqueda híbrida, el prompt de CrianzApp y Groq si hay clave."""
 
     def __init__(
         self,
         directorio_conocimiento: str | Path = BASE_CONOCIMIENTO_DIR,
         directorio_vectorstore: str | Path | None = None,
-        chunk_size: int = 500,
-        chunk_overlap: int = 50,
-        top_k: int = 3,
+        chunk_size: int | None = None,
+        chunk_overlap: int | None = None,
+        top_k: int | None = None,
     ) -> None:
+        chunk_size = chunk_size or _entero_entorno("RAG_CHUNK_SIZE", TAMANO_FRAGMENTO)
+        chunk_overlap = (
+            chunk_overlap
+            if chunk_overlap is not None
+            else _entero_entorno("RAG_CHUNK_OVERLAP", SOLAPAMIENTO_FRAGMENTO)
+        )
+        top_k = top_k or _entero_entorno("RAG_TOP_K", TOP_K_PREDETERMINADO)
         if top_k <= 0:
             raise ValueError("top_k debe ser mayor que cero.")
         self.base_conocimiento = BaseConocimientoLocal.cargar(
@@ -76,6 +137,13 @@ class ChatRAG:
         self.top_k = top_k
         self.api_key = os.getenv("GROQ_API_KEY", "").strip()
         self.modelo = os.getenv("GROQ_MODEL", MODELO_GROQ_PREDETERMINADO).strip()
+        self._cliente: Any = None
+        if not self.api_key:
+            LOGGER.warning(
+                "GROQ_API_KEY no está configurada: CrianzApp responderá solo con "
+                "extractos de la guía (sin redacción con IA). Define la variable "
+                "en .env o en el panel de Render para activar las respuestas."
+            )
 
     def estado(self) -> dict[str, Any]:
         """Devuelve información de disponibilidad sin revelar credenciales."""
@@ -84,8 +152,12 @@ class ChatRAG:
             "knowledge_chunks": len(self.base_conocimiento.fragmentos),
             "llm_configured": bool(self.api_key),
             "model": self.modelo if self.api_key else None,
+            "retrieval": (
+                "hybrid" if self.base_conocimiento.vectores_disponibles else "lexical"
+            ),
         }
 
+    # ------------------------------------------------------------------ flujo
     def responder(
         self, mensaje: str, historial: list[dict[str, Any]] | None = None
     ) -> dict[str, Any]:
@@ -95,28 +167,30 @@ class ChatRAG:
         pero se ignora para evitar arrastre de temas y envío de datos al LLM.
         """
         del historial
-        fragmentos = self.base_conocimiento.buscar(mensaje, limite=self.top_k)
-        fuentes = self._formatear_fuentes(fragmentos)
-        contextos = [fragmento.texto for fragmento in fragmentos]
-
-        if self._es_situacion_de_riesgo(mensaje):
+        tipo_riesgo = self._clasificar_riesgo(mensaje)
+        if tipo_riesgo:
+            mensajes = {
+                "autolesion": MENSAJE_AUTOLESION,
+                "riesgo_adulto": MENSAJE_RIESGO_ADULTO,
+                "abuso": MENSAJE_ALERTA,
+            }
             return self._resultado(
-                MENSAJE_ALERTA,
-                fuentes,
-                contextos,
+                mensajes[tipo_riesgo],
+                [],
+                [],
                 "safety",
                 "Por seguridad, esta situación requiere acompañamiento humano.",
             )
 
+        fragmentos = self.base_conocimiento.buscar(mensaje, limite=self.top_k)
         if not fragmentos:
-            return self._resultado(
-                MENSAJE_SIN_EVIDENCIA, [], [], "no_evidence", None
-            )
+            return self._resultado(MENSAJE_SIN_EVIDENCIA, [], [], "no_evidence", None)
+
+        fuentes = self._formatear_fuentes(fragmentos)
+        contextos = [fragmento.texto for fragmento in fragmentos]
 
         if not self.api_key:
-            return self._respuesta_local(
-                mensaje, fragmentos, fuentes, contextos
-            )
+            return self._respuesta_local(mensaje, fragmentos, fuentes, contextos)
 
         try:
             respuesta = self._generar_con_groq(mensaje, fragmentos)
@@ -128,36 +202,77 @@ class ChatRAG:
                 fuentes,
                 contextos,
                 notice=(
-                    "No fue posible generar una respuesta; te comparto "
-                    "directamente la evidencia local recuperada."
+                    "No fue posible redactar una respuesta personalizada; te "
+                    "comparto directamente los pasajes más relevantes de la guía."
                 ),
             )
+        respuesta, fuentes, contextos = self._renumerar_citas(
+            respuesta, fuentes, contextos
+        )
         return self._resultado(respuesta, fuentes, contextos, "groq", None)
+
+    # ------------------------------------------------------------------- Groq
+    def _obtener_cliente(self) -> Any:
+        if self._cliente is None:
+            from groq import Groq
+
+            self._cliente = Groq(api_key=self.api_key, timeout=40.0, max_retries=1)
+        return self._cliente
 
     def _generar_con_groq(
         self,
         mensaje: str,
         fragmentos: list[FragmentoConocimiento],
     ) -> str:
-        """Genera una respuesta estructurada a partir de los fragmentos citados."""
-        from groq import Groq
+        """Genera una respuesta estructurada a partir de los fragmentos citados.
 
+        Reintenta una vez indicando al modelo qué incumplió el formato.
+        """
         contexto = "\n\n".join(
-            f"[Fuente {indice}: {fragmento.fuente}"
+            f"[Fuente {indice}: {fragmento.titulo or fragmento.fuente}"
             f"{f', página {fragmento.page}' if fragmento.page else ''}]\n"
             f"{fragmento.texto}"
             for indice, fragmento in enumerate(fragmentos, start=1)
         )
         mensajes = build_prompt(mensaje, contexto)
-        cliente = Groq(api_key=self.api_key, timeout=25.0, max_retries=1)
+        ultimo_error: Exception | None = None
+        for intento in range(INTENTOS_GENERACION):
+            contenido = self._llamar_groq(mensajes)
+            try:
+                return self._componer_respuesta(contenido, len(fragmentos))
+            except (ValueError, KeyError, TypeError) as error:
+                ultimo_error = error
+                LOGGER.warning(
+                    "Respuesta del modelo fuera del contrato (intento %s): %s",
+                    intento + 1,
+                    error,
+                )
+                mensajes = [
+                    *mensajes,
+                    {"role": "assistant", "content": contenido or "{}"},
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Tu respuesta no cumplió el formato ({error}). "
+                            "Devuelve únicamente el JSON corregido, con las "
+                            "mismas claves y citas [Fuente N] válidas."
+                        ),
+                    },
+                ]
+        raise ValueError(f"El modelo no cumplió el contrato: {ultimo_error}")
+
+    def _llamar_groq(self, mensajes: list[dict[str, str]]) -> str:
+        parametros: dict[str, Any] = {
+            "model": self.modelo,
+            "messages": mensajes,
+            "temperature": 0.3,
+            "max_completion_tokens": MAX_TOKENS_RESPUESTA,
+            "response_format": {"type": "json_object"},
+        }
+        if "gpt-oss" in self.modelo:
+            parametros["reasoning_effort"] = "low"
         inicio = perf_counter()
-        completion = cliente.chat.completions.create(
-            model=self.modelo,
-            messages=mensajes,
-            temperature=0.2,
-            max_tokens=350,
-            response_format={"type": "json_object"},
-        )
+        completion = self._obtener_cliente().chat.completions.create(**parametros)
         uso = completion.usage
         LOGGER.info(
             "Groq completado model=%s input_tokens=%s output_tokens=%s "
@@ -168,27 +283,58 @@ class ChatRAG:
             (perf_counter() - inicio) * 1000,
         )
         contenido = completion.choices[0].message.content
-        if not contenido:
+        if not contenido or not contenido.strip():
             raise ValueError("Groq devolvió una respuesta vacía.")
+        return contenido
 
-        datos = json.loads(contenido)
+    @staticmethod
+    def _extraer_json(contenido: str) -> dict[str, Any]:
+        """Lee el JSON aunque el modelo lo rodee de texto o de vallas ```."""
+        try:
+            datos = json.loads(contenido)
+        except json.JSONDecodeError:
+            coincidencia = re.search(r"\{.*\}", contenido, re.DOTALL)
+            if not coincidencia:
+                raise ValueError("La respuesta no contiene un objeto JSON.")
+            datos = json.loads(coincidencia.group(0))
+        if not isinstance(datos, dict):
+            raise ValueError("La respuesta debe ser un objeto JSON.")
+        return datos
+
+    @classmethod
+    def _componer_respuesta(cls, contenido: str, cantidad_fuentes: int) -> str:
+        """Valida el JSON del modelo y lo convierte en texto para la persona."""
+        datos = cls._extraer_json(contenido)
+        for clave in ("validacion", "lectura_conducta", "limite_de_la_guia", "senal_alerta"):
+            if isinstance(datos.get(clave), str):
+                datos[clave] = limpiar_texto_modelo(datos[clave]) or None
+        if isinstance(datos.get("estrategias"), list):
+            datos["estrategias"] = [
+                limpiar_texto_modelo(item) if isinstance(item, str) else item
+                for item in datos["estrategias"]
+            ]
         validar_formato(datos)
-        citas = {
-            int(numero)
-            for numero in re.findall(r"\[Fuente\s+(\d+)\]", contenido)
-        }
-        if not citas or any(numero > len(fragmentos) for numero in citas):
-            raise ValueError("La respuesta no cita fuentes recuperadas válidas.")
-        estrategias = datos["estrategias"]
-        if not isinstance(datos["resumen_breve"], str) or not all(
-            isinstance(estrategia, str) and estrategia.strip()
-            for estrategia in estrategias
-        ):
-            raise ValueError("El modelo devolvió una respuesta fuera del contrato.")
 
-        partes = [datos["resumen_breve"].strip()]
-        if estrategias:
-            partes.append("\n".join(f"• {texto.strip()}" for texto in estrategias))
+        texto_con_citas = " ".join(
+            [datos["lectura_conducta"] or "", *datos["estrategias"]]
+        )
+        citas = cls._numeros_citados(texto_con_citas)
+        if not citas:
+            raise ValueError("Ninguna estrategia cita una fuente [Fuente N].")
+        invalidas = [n for n in cls._numeros_citados(json.dumps(datos, ensure_ascii=False))
+                     if not 1 <= n <= cantidad_fuentes]
+        if invalidas:
+            raise ValueError(f"Cita fuentes inexistentes: {sorted(set(invalidas))}.")
+
+        partes = [datos["validacion"].strip()]
+        if datos["lectura_conducta"]:
+            partes.append(datos["lectura_conducta"].strip())
+        partes.append(
+            "Qué puedes intentar:\n"
+            + "\n".join(f"• {texto.strip()}" for texto in datos["estrategias"])
+        )
+        if datos["limite_de_la_guia"]:
+            partes.append(f"Lo que la guía no cubre: {datos['limite_de_la_guia'].strip()}")
         if datos["senal_alerta"]:
             partes.append(f"Nota importante: {datos['senal_alerta'].strip()}")
         if datos["derivar_a_profesional"]:
@@ -197,6 +343,64 @@ class ChatRAG:
             )
         return "\n\n".join(partes)
 
+    # ---------------------------------------------------------------- citas
+    _PATRON_CITA = re.compile(r"\[Fuentes?\s+([\d,\sy]+)\]")
+
+    @classmethod
+    def _numeros_citados(cls, texto: str) -> list[int]:
+        return [
+            int(numero)
+            for cita in cls._PATRON_CITA.finditer(texto)
+            for numero in re.findall(r"\d+", cita.group(1))
+        ]
+
+    @classmethod
+    def _renumerar_citas(
+        cls,
+        respuesta: str,
+        fuentes: list[dict[str, Any]],
+        contextos: list[str],
+    ) -> tuple[str, list[dict[str, Any]], list[str]]:
+        """Deja solo las fuentes citadas y renumera [Fuente N] desde 1."""
+        indices = sorted(
+            {n for n in cls._numeros_citados(respuesta) if 1 <= n <= len(fuentes)}
+        )
+        if not indices:
+            return respuesta, fuentes, contextos
+        nuevo = {anterior: posicion for posicion, anterior in enumerate(indices, 1)}
+
+        def sustituir(coincidencia: re.Match[str]) -> str:
+            numeros = sorted({
+                nuevo[int(n)]
+                for n in re.findall(r"\d+", coincidencia.group(1))
+                if int(n) in nuevo
+            })
+            if not numeros:
+                return ""
+            etiqueta = "Fuente" if len(numeros) == 1 else "Fuentes"
+            return f"[{etiqueta} {', '.join(map(str, numeros))}]"
+
+        respuesta = cls._PATRON_CITA.sub(sustituir, respuesta)
+        # "[Fuente 1] [Fuente 2]" -> "[Fuentes 1, 2]"
+        anterior = None
+        while anterior != respuesta:
+            anterior = respuesta
+            respuesta = re.sub(
+                r"\[Fuentes?\s+([\d, ]+)\]\s*\[Fuentes?\s+([\d, ]+)\]",
+                lambda m: "[Fuentes "
+                + ", ".join(sorted(
+                    set(re.findall(r"\d+", m.group(1) + " " + m.group(2))), key=int
+                ))
+                + "]",
+                respuesta,
+            )
+        return (
+            respuesta,
+            [fuentes[i - 1] for i in indices],
+            [contextos[i - 1] for i in indices],
+        )
+
+    # -------------------------------------------------------- modo sin IA
     @staticmethod
     def _respuesta_local(
         mensaje: str,
@@ -205,148 +409,27 @@ class ChatRAG:
         contextos: list[str],
         notice: str | None = None,
     ) -> dict[str, Any]:
-        respuesta = ChatRAG._sintetizar_respuesta_local(mensaje, fragmentos)
-        if respuesta is None:
-            extractos = ChatRAG._extractos_locales(mensaje, fragmentos)
-            if not extractos and len(fragmentos) == 1:
-                extractos = ChatRAG._extractos_locales(
-                    "", fragmentos, usar_primer_fragmento=True
-                )
-            if not extractos:
-                return ChatRAG._resultado(
-                    MENSAJE_SIN_EVIDENCIA, [], [], "no_evidence", notice
-                )
-            respuesta = (
-                "Estas frases de la guía responden a la consulta:\n\n"
-                + "\n\n".join(extractos)
+        """Sin LLM: muestra las frases de la guía que mejor responden."""
+        extractos = ChatRAG._extractos_locales(mensaje, fragmentos)
+        if not extractos:
+            return ChatRAG._resultado(
+                MENSAJE_SIN_EVIDENCIA, [], [], "no_evidence", notice
             )
-        indices_citados = sorted({
-            int(numero)
-            for cita in re.finditer(r"\[Fuentes?\s+([\d, ]+)\]", respuesta)
-            for numero in re.findall(r"\d+", cita.group(1))
-            if 1 <= int(numero) <= len(fuentes)
-        })
-        if indices_citados:
-            nuevo_indice = {
-                indice_anterior: indice_nuevo
-                for indice_nuevo, indice_anterior in enumerate(indices_citados, start=1)
-            }
-
-            def renumerar_citas(coincidencia: re.Match[str]) -> str:
-                indices = [
-                    nuevo_indice[int(numero)]
-                    for numero in re.findall(r"\d+", coincidencia.group(1))
-                    if int(numero) in nuevo_indice
-                ]
-                etiqueta = "Fuente" if len(indices) == 1 else "Fuentes"
-                return f"[{etiqueta} {', '.join(map(str, indices))}]"
-
-            respuesta = re.sub(
-                r"\[Fuentes?\s+([\d, ]+)\]", renumerar_citas, respuesta
-            )
-            fuentes = [fuentes[indice - 1] for indice in indices_citados]
-            contextos = [contextos[indice - 1] for indice in indices_citados]
-        return ChatRAG._resultado(respuesta, fuentes, contextos, "local", notice)
-
-    @staticmethod
-    def _sintetizar_respuesta_local(
-        mensaje: str,
-        fragmentos: list[FragmentoConocimiento],
-        usar_primer_fragmento: bool = False,
-    ) -> str | None:
-        """Redacta resúmenes breves para temas cubiertos por evidencia local."""
-        consulta = ChatRAG._normalizar(mensaje)
-        textos = [ChatRAG._normalizar(fragmento.texto) for fragmento in fragmentos]
-
-        def fuentes_con(palabras: tuple[str, ...]) -> list[int]:
-            return [
-                indice
-                for indice, texto in enumerate(textos, start=1)
-                if all(palabra in texto for palabra in palabras)
-            ]
-
-        def cita(indices: list[int]) -> str:
-            numeros = ", ".join(str(indice) for indice in indices)
-            return f"[Fuente {numeros}]" if len(indices) == 1 else f"[Fuentes {numeros}]"
-
-        if "rutina" in consulta and "ritual" in consulta:
-            indices = sorted(set(
-                fuentes_con(("practicas establecidas",))
-                + fuentes_con(("objetivo de los rituales como conexion",))
-                + fuentes_con(("parte favorita del dia",))
-            ))
-            if indices:
-                return (
-                    "Una rutina reúne pasos habituales, como bañarse, leer y "
-                    "apagar la luz; un ritual añade conexión, por ejemplo, "
-                    "compartir la parte favorita del día. "
-                    f"{cita(indices)}"
-                )
-
-        if "tres reglas" in consulta and "grupo" in consulta:
-            indices = fuentes_con(("las tres reglas son", "mantenerse juntos"))
-            if indices:
-                return (
-                    "Para el grupo de cuidado, la guía enumera tres reglas: "
-                    "mantenerse juntos, no lastimar y divertirse. "
-                    f"{cita(indices)}"
-                )
-
-        if any(termino in consulta for termino in ("seguro", "segura", "seguros")):
-            indices = sorted(set(
-                fuentes_con(("segur", "conect"))
-                + fuentes_con(("ambientes predecibles",))
-                + fuentes_con(("se preocupan por ellos",))
-                + fuentes_con(("regular sus emociones",))
-            ))
-            if indices:
-                return (
-                    "TBRI distingue entre que un niño esté seguro y que se sienta "
-                    "seguro. La guía recomienda ambientes predecibles y relaciones "
-                    "con adultos que se preocupan por ellos; esa sensación ayuda "
-                    "a la conexión y a regular las emociones. "
-                    f"{cita(indices)}"
-                )
-
-        if any(termino in consulta for termino in ("escucha", "escuchar", "obedece")):
-            indices = sorted(set(
-                fuentes_con(("prestar completa atencion",))
-                + fuentes_con(("respetar las diferentes opiniones",))
-                + fuentes_con(("dar opciones",))
-            ))
-            if indices:
-                return (
-                    "Entre las estrategias TBRI están prestarle atención completa "
-                    "cuando habla, respetar sus opiniones y ofrecerle opciones. "
-                    f"{cita(indices)}"
-                )
-
-        if any(termino in consulta for termino in ("llora", "llanto", "frustrad", "berrinche", "rabieta")):
-            indices = sorted(set(
-                fuentes_con(("regular sus emociones",))
-                + fuentes_con(("autorregulacion", "emociones"))
-            ))
-            if indices:
-                return (
-                    "Siento que estés pasando por un momento difícil. La guía "
-                    "relaciona la sensación de seguridad con la regulación "
-                    "emocional, pero estos pasajes no describen una técnica "
-                    f"específica para el llanto. {cita(indices)}"
-                )
-
-        if any(termino in consulta for termino in ("golpe", "pega", "empuja", "muerde")):
-            indices = sorted(set(
-                fuentes_con(("aborda rapido el comportamiento desafiante",))
-                + fuentes_con(("comportamiento desafiante", "aprender de la experiencia"))
-            ))
-            if indices:
-                return (
-                    "Entiendo que puede ser difícil durante la comida. El material "
-                    "TBRI recomienda abordar pronto la conducta desafiante y señala "
-                    "que así el niño puede aprender de la experiencia. "
-                    f"{cita(indices)}"
-                )
-        return None
+        respuesta = (
+            "Esto es lo que dice la guía sobre tu consulta:\n\n"
+            + "\n\n".join(extractos)
+        )
+        respuesta, fuentes, contextos = ChatRAG._renumerar_citas(
+            respuesta, fuentes, contextos
+        )
+        return ChatRAG._resultado(
+            respuesta,
+            fuentes,
+            contextos,
+            "local",
+            notice
+            or "Te muestro los pasajes más relevantes de la guía tal como están escritos.",
+        )
 
     @staticmethod
     def _normalizar(texto: str) -> str:
@@ -360,85 +443,59 @@ class ChatRAG:
 
     @staticmethod
     def _extractos_locales(
-        mensaje: str,
-        fragmentos: list[FragmentoConocimiento],
-        usar_primer_fragmento: bool = False,
+        mensaje: str, fragmentos: list[FragmentoConocimiento], maximo: int = 3
     ) -> list[str]:
-        """Selecciona pocas frases completas y pertinentes de la evidencia."""
-        grupos: dict[
-            tuple[str, int | None],
-            list[tuple[int, int, FragmentoConocimiento]],
-        ] = {}
-        for indice_fuente, fragmento in enumerate(fragmentos, start=1):
-            try:
-                indice_chunk = int(fragmento.chunk_id.rsplit("-", 1)[1])
-            except (IndexError, ValueError):
-                indice_chunk = indice_fuente
-            grupos.setdefault((fragmento.fuente, fragmento.page), []).append(
-                (indice_chunk, indice_fuente, fragmento)
-            )
-
-        terminos_consulta = set(_terminos_relevantes(mensaje))
-        candidatos: list[tuple[int, int, str, list[int]]] = []
-        for grupo in grupos.values():
-            grupo.sort(key=lambda elemento: elemento[0])
-            bloques: list[list[tuple[int, int, FragmentoConocimiento]]] = []
-            for elemento in grupo:
-                if bloques and elemento[0] == bloques[-1][-1][0] + 1:
-                    bloques[-1].append(elemento)
-                else:
-                    bloques.append([elemento])
-
-            for bloque in bloques:
-                texto = " ".join(fragmento.texto for _, _, fragmento in bloque)
-                texto = re.sub(
-                    r"©.*?escrito del ICD\.?\s*", "", texto, flags=re.DOTALL
+        """Frases completas de la evidencia que comparten al menos dos señales
+        con la pregunta (palabras propias o su expansión al vocabulario TBRI)."""
+        base = _terminos_relevantes(mensaje)
+        extra = _terminos_relevantes(" ".join(_expandir_consulta(mensaje))) - base
+        candidatos: list[tuple[float, int, int, str]] = []
+        for numero, fragmento in enumerate(fragmentos, start=1):
+            texto = fragmento.texto
+            if fragmento.section and texto.startswith(fragmento.section):
+                texto = texto[len(fragmento.section):]
+            posicion = 0
+            for bloque in re.split(r"\n\s*\n", texto):
+                bloque = bloque.strip().lstrip("•°- ").strip()
+                if not bloque:
+                    continue
+                es_vineta = len(bloque) < 220 and not re.search(r"[.!?:]$", bloque)
+                frases = (
+                    [bloque]
+                    if es_vineta
+                    else re.split(r"(?<=[.!?])\s+", bloque)
                 )
-                lineas = []
-                for linea in texto.splitlines():
-                    linea = linea.strip().lstrip("•°- ").strip()
+                for frase in frases:
+                    frase = frase.strip()
+                    posicion += 1
                     if (
-                        not linea
-                        or "?" in linea
-                        or re.fullmatch(r"[_\s\d.]+", linea)
-                        or re.match(r"^\d+\s+", linea)
-                        or linea.lower() in {"rituales diarios", "introduccion"}
+                        not 30 <= len(frase) <= 320
+                        or "?" in frase
+                        or "¿" in frase
+                        or EJERCICIO_DE_LIBRO.match(frase)
+                        or frase.endswith(":")
                     ):
                         continue
-                    lineas.append(linea)
-                texto = re.sub(r"\s+", " ", " ".join(lineas)).strip()
-                if not texto:
-                    continue
-
-                numeros = sorted({indice_fuente for _, indice_fuente, _ in bloque})
-                frases = re.split(r"(?<=[.!?])\s+", texto)
-                for frase in frases:
-                    frase = frase.strip(" •°-\t")
-                    if not 35 <= len(frase) <= 260 or "?" in frase:
-                        continue
-                    terminos_frase = set(_terminos_relevantes(frase))
-                    coincidencias = len(terminos_consulta & terminos_frase)
-                    if not coincidencias and not usar_primer_fragmento:
-                        continue
-                    candidatos.append(
-                        (coincidencias, numeros[0], frase, numeros)
-                    )
-
-        candidatos.sort(key=lambda item: (-item[0], item[1]))
+                    terminos = _terminos_relevantes(frase)
+                    unidades = len(base & terminos) + 0.5 * len(extra & terminos)
+                    if unidades >= 2:
+                        candidatos.append((unidades, numero, posicion, frase))
+        candidatos.sort(key=lambda c: (-c[0], c[1], c[2]))
         extractos: list[str] = []
         vistas: set[str] = set()
-        for _, _, frase, numeros in candidatos:
+        for _, numero, _, frase in candidatos:
             clave = ChatRAG._normalizar(frase)
             if clave in vistas:
                 continue
             vistas.add(clave)
-            etiqueta = "Fuente" if len(numeros) == 1 else "Fuentes"
-            citas = ", ".join(str(numero) for numero in numeros)
-            extractos.append(f"• {frase} [{etiqueta} {citas}]")
-            if len(extractos) == 3:
+            if not frase.endswith((".", "!", ")", '"')):
+                frase += "."
+            extractos.append(f"• {frase} [Fuente {numero}]")
+            if len(extractos) == maximo:
                 break
         return extractos
 
+    # ------------------------------------------------------------ utilidades
     @staticmethod
     def _resultado(
         respuesta: str,
@@ -466,6 +523,7 @@ class ChatRAG:
             {
                 "name": fragmento.fuente,
                 "source": fragmento.fuente,
+                "title": fragmento.titulo,
                 "excerpt": fragmento.texto,
                 "chunk_id": fragmento.chunk_id,
                 "page": fragmento.page,
@@ -475,9 +533,19 @@ class ChatRAG:
         ]
 
     @staticmethod
-    def _es_situacion_de_riesgo(texto: str) -> bool:
+    def _clasificar_riesgo(texto: str) -> str | None:
+        """Devuelve 'autolesion', 'riesgo_adulto', 'abuso' o None."""
         normalizado = ChatRAG._normalizar(texto)
-        return bool(
-            PATRONES_ALERTA.search(normalizado)
-            or PATRONES_DANO_A_NINO.search(normalizado)
-        )
+        if PATRONES_AUTOLESION.search(normalizado):
+            return "autolesion"
+        if PATRONES_RIESGO_ADULTO.search(normalizado):
+            return "riesgo_adulto"
+        if PATRONES_ABUSO.search(normalizado) or PATRONES_DANO_A_NINO.search(
+            normalizado
+        ):
+            return "abuso"
+        return None
+
+    @staticmethod
+    def _es_situacion_de_riesgo(texto: str) -> bool:
+        return ChatRAG._clasificar_riesgo(texto) is not None

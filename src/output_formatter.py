@@ -1,25 +1,39 @@
 # -*- coding: utf-8 -*-
 """Contrato y validación de la salida JSON del modelo."""
 
+import re
+
 CLAVES_ESPERADAS = {
-    "resumen_breve": str,
+    "validacion": str,
+    "lectura_conducta": (str, type(None)),
     "estrategias": list,
+    "limite_de_la_guia": (str, type(None)),
     "senal_alerta": (str, type(None)),
     "derivar_a_profesional": bool,
 }
+LIMITE_VALIDACION = 450
+LIMITE_LECTURA = 550
+LIMITE_ESTRATEGIA = 500
+LIMITE_NOTA = 400
+MIN_ESTRATEGIAS = 1
+MAX_ESTRATEGIAS = 4
 
-PALABRAS_ALERTA = [
-    "abuso", "toca", "golpea", "golpe", "maltrato", "violencia",
-    "encierra", "amenaza", "abandono", "self-harm", "suicid",
-]
+
+def limpiar_texto_modelo(texto: str) -> str:
+    """Quita del final preguntas de seguimiento ("¿Quieres que...?").
+
+    El prompt pide no hacerlas; si el modelo se le escapa una, se elimina en
+    lugar de descartar toda la respuesta.
+    """
+    texto = texto.strip()
+    return re.sub(r"\s*¿[^?¿]*\?\s*$", "", texto).strip()
 
 
 def validar_formato(respuesta: dict) -> bool:
     """
-    Valida claves, tipos y límites conversacionales del contrato JSON.
+    Valida claves, tipos y límites de longitud del contrato JSON.
 
-    Lanza ValueError si faltan claves, el contenido es excesivo o la salida
-    incluye preguntas de seguimiento.
+    Lanza ValueError si faltan claves, el contenido es excesivo o está vacío.
     """
     if not isinstance(respuesta, dict):
         raise ValueError("La respuesta debe ser un objeto JSON.")
@@ -42,125 +56,35 @@ def validar_formato(respuesta: dict) -> bool:
                 f"llegó {type(respuesta[clave])}."
             )
 
-    resumen = respuesta["resumen_breve"].strip()
+    validacion = respuesta["validacion"].strip()
+    if not validacion or len(validacion) > LIMITE_VALIDACION:
+        raise ValueError(
+            f"'validacion' debe tener entre 1 y {LIMITE_VALIDACION} caracteres."
+        )
+
     estrategias = respuesta["estrategias"]
-    senal = respuesta["senal_alerta"]
-    if not resumen or len(resumen) > 360:
-        raise ValueError("El resumen debe tener entre 1 y 360 caracteres.")
-    if not 1 <= len(estrategias) <= 3:
-        raise ValueError("Debe haber entre una y tres estrategias.")
+    if not MIN_ESTRATEGIAS <= len(estrategias) <= MAX_ESTRATEGIAS:
+        raise ValueError(
+            f"Debe haber entre {MIN_ESTRATEGIAS} y {MAX_ESTRATEGIAS} estrategias."
+        )
     if any(
         not isinstance(item, str)
         or not item.strip()
-        or len(item) > 240
+        or len(item) > LIMITE_ESTRATEGIA
         for item in estrategias
     ):
-        raise ValueError("Cada estrategia debe ser texto breve y no vacío.")
-    textos = [resumen, *estrategias]
-    if isinstance(senal, str):
-        if not senal.strip() or len(senal) > 240:
-            raise ValueError("La señal debe ser texto breve y no vacío.")
-        textos.append(senal)
-    if any("?" in texto or "¿" in texto for texto in textos):
-        raise ValueError("La respuesta no debe incluir preguntas de seguimiento.")
+        raise ValueError(
+            f"Cada estrategia debe ser texto no vacío de hasta {LIMITE_ESTRATEGIA} caracteres."
+        )
+
+    for clave, limite in (
+        ("lectura_conducta", LIMITE_LECTURA),
+        ("limite_de_la_guia", LIMITE_NOTA),
+        ("senal_alerta", LIMITE_NOTA),
+    ):
+        valor = respuesta[clave]
+        if isinstance(valor, str) and (not valor.strip() or len(valor) > limite):
+            raise ValueError(
+                f"'{clave}' debe ser null o texto de hasta {limite} caracteres."
+            )
     return True
-
-
-def generar_respuesta_simulada(contexto: str, pregunta: str) -> dict:
-    """
-    Genera una respuesta de ejemplo (NO usa ningún LLM) para demostrar
-    cómo luciría la salida del asistente cumpliendo el formato definido
-    en el System Prompt. La lógica es una regla simple basada en
-    palabras clave, suficiente para el alcance de este entregable
-    (diseño de prompts, no inferencia real).
-    """
-    texto_completo = f"{contexto} {pregunta}".lower()
-    hay_alerta = any(palabra in texto_completo for palabra in PALABRAS_ALERTA)
-
-    if hay_alerta:
-        respuesta = {
-            "resumen_breve": (
-                "Gracias por compartir esta situación; lo que describes "
-                "requiere atención profesional inmediata."
-            ),
-            "estrategias": [
-                "Cree en lo que el niño o niña te está contando.",
-                "No lo confrontes ni lo hagas repetir la historia varias veces.",
-                "Contacta cuanto antes a una entidad especializada en "
-                "protección infantil (en Colombia: ICBF, línea 141).",
-            ],
-            "senal_alerta": (
-                "El relato contiene indicios de posible riesgo o "
-                "vulneración hacia el menor."
-            ),
-            "derivar_a_profesional": True,
-        }
-    else:
-        respuesta = {
-            "resumen_breve": (
-                "Entiendo la situación que describes; es un reto habitual "
-                "en esta etapa del desarrollo."
-            ),
-            "estrategias": [
-                "Anticipa el límite antes del momento de conflicto.",
-                "Valida la emoción del niño/a sin ceder el límite.",
-                "Mantén la calma y la coherencia en la respuesta.",
-            ],
-            "senal_alerta": None,
-            "derivar_a_profesional": False,
-        }
-
-    validar_formato(respuesta)
-    return respuesta
-
-
-def generar_respuesta_local(contexto: str, pregunta: str, fragmentos: list) -> dict:
-    """Responde con fragmentos de la base local, sin usar un LLM."""
-    texto_completo = f"{contexto} {pregunta}".lower()
-    hay_alerta = any(palabra in texto_completo for palabra in PALABRAS_ALERTA)
-
-    if hay_alerta:
-        respuesta = {
-            "resumen_breve": (
-                "Gracias por compartir esta situación; lo que describes "
-                "requiere atención profesional inmediata."
-            ),
-            "estrategias": [
-                "Cree en lo que el niño o niña te está contando.",
-                "No lo confrontes ni lo hagas repetir la historia varias veces.",
-                "Contacta cuanto antes a una entidad especializada en "
-                "protección infantil (en Colombia: ICBF, línea 141).",
-            ],
-            "senal_alerta": (
-                "El relato contiene indicios de posible riesgo o "
-                "vulneración hacia el menor."
-            ),
-            "derivar_a_profesional": True,
-        }
-    elif fragmentos:
-        respuesta = {
-            "resumen_breve": (
-                "Encontré información relacionada en la base de "
-                "conocimiento local. Estas son las orientaciones "
-                "recuperadas para tu consulta."
-            ),
-            "estrategias": [fragmento.texto for fragmento in fragmentos[:3]],
-            "senal_alerta": None,
-            "derivar_a_profesional": False,
-        }
-    else:
-        respuesta = {
-            "resumen_breve": (
-                "Mi especialidad es la crianza responsable, pero no encontré "
-                "información suficiente en la base local para responder con seguridad."
-            ),
-            "estrategias": [
-                "Haz una consulta relacionada con crianza responsable.",
-                "Para una orientación específica, consulta a un profesional.",
-            ],
-            "senal_alerta": None,
-            "derivar_a_profesional": False,
-        }
-
-    validar_formato(respuesta)
-    return respuesta

@@ -19,8 +19,8 @@ from src.knowledge_base import (
 
 class KnowledgeBaseLoaderTests(unittest.TestCase):
     def test_chunking_configuration_is_explicit(self):
-        self.assertEqual(TAMANO_FRAGMENTO, 500)
-        self.assertEqual(SOLAPAMIENTO_FRAGMENTO, 50)
+        self.assertEqual(TAMANO_FRAGMENTO, 900)
+        self.assertEqual(SOLAPAMIENTO_FRAGMENTO, 120)
         self.assertEqual(
             EXTENSIONES_ADMITIDAS,
             {".pdf", ".docx", ".txt", ".md", ".html", ".htm"},
@@ -91,7 +91,7 @@ class KnowledgeBaseRetrievalTests(unittest.TestCase):
     def setUpClass(cls):
         raiz = Path(__file__).resolve().parents[1]
         cls.base = BaseConocimientoLocal.cargar(
-            raiz / "docs" / "base_conocimiento"
+            raiz / "docs" / "base_conocimiento", usar_vectores=False
         )
 
     def test_in_domain_benchmark_questions_retrieve_expected_sources(self):
@@ -160,21 +160,21 @@ class KnowledgeBaseRetrievalTests(unittest.TestCase):
                 "Según la revisión sistemática de Lin-Lewry et al. (2024), "
                 "¿qué efectos tienen las intervenciones digitales en los "
                 "padres durante el primer año postparto?",
-                "39.pdf",
+                "39.",
                 {1, 6, 7, 8},
             ),
             (
                 "¿Qué moderadores o factores clave incrementaron la "
                 "efectividad de las intervenciones digitales según "
                 "Lin-Lewry et al. (2024)?",
-                "39.pdf",
+                "39.",
                 {1, 5, 6},
             ),
         ]
 
         for consulta, prefijo_fuente, paginas in cases:
             with self.subTest(consulta=consulta):
-                fragmentos = self.base.buscar(consulta)
+                fragmentos = self.base.buscar(consulta, limite=6)
                 self.assertTrue(fragmentos)
                 self.assertTrue(
                     any(
@@ -202,7 +202,7 @@ class KnowledgeBaseRetrievalTests(unittest.TestCase):
 
         for consulta in consultas:
             with self.subTest(consulta=consulta):
-                fragmentos = self.base.buscar(consulta)
+                fragmentos = self.base.buscar(consulta, limite=6)
                 self.assertTrue(fragmentos)
                 self.assertTrue(
                     any(

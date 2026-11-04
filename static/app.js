@@ -94,7 +94,7 @@ function addAssistantMessage(result) {
       const sourceName = document.createElement('strong');
       const location = source.page ? ` · página ${source.page}` : '';
       const section = source.section ? ` · ${source.section}` : '';
-      sourceName.textContent = `[Fuente ${index + 1}] ${source.name || source.source || 'Guía local'}${location}${section}`;
+      sourceName.textContent = `[Fuente ${index + 1}] ${source.title || source.name || source.source || 'Guía local'}${location}${section}`;
       const excerpt = document.createElement('p');
       excerpt.textContent = source.excerpt || source.fragment || '';
       item.append(sourceName, excerpt);

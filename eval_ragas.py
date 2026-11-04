@@ -127,8 +127,8 @@ def main() -> None:
         )
 
     datos = cargar_dataset(DATASET_PATH)
-    chunk_size = _entero_entorno("RAG_CHUNK_SIZE", 500, 1)
-    chunk_overlap = _entero_entorno("RAG_CHUNK_OVERLAP", 50, 0)
+    chunk_size = _entero_entorno("RAG_CHUNK_SIZE", 900, 1)
+    chunk_overlap = _entero_entorno("RAG_CHUNK_OVERLAP", 120, 0)
     top_k = _entero_entorno("RAG_TOP_K", 3, 1)
     if chunk_overlap >= chunk_size:
         raise ValueError("RAG_CHUNK_OVERLAP debe ser menor que RAG_CHUNK_SIZE.")
