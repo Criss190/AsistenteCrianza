@@ -101,8 +101,17 @@ def cargar_dataset(ruta: Path) -> list[dict[str, str]]:
 def recolectar_evidencia(
     datos: list[dict[str, str]], chat: ChatRAG
 ) -> list[dict[str, Any]]:
-    """Ejecuta el RAG y reúne las cuatro columnas requeridas por Ragas."""
-    chat.api_key = ""
+    """Ejecuta el RAG (recuperación + generación real con Groq, si hay clave)
+    y reúne las cuatro columnas requeridas por Ragas.
+
+    Evaluar con `chat.api_key` vaciado mediría solo la recuperación y el modo
+    extractivo local, no el pipeline de generación que de verdad se despliega.
+    """
+    if not chat.api_key:
+        print(
+            "Aviso: GROQ_API_KEY no está configurada; se evaluará el modo "
+            "extractivo local, no la generación real con Groq."
+        )
     evaluacion: list[dict[str, Any]] = []
     for fila in datos:
         resultado = chat.responder(fila["question"])

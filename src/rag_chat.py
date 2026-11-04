@@ -30,6 +30,8 @@ MODELO_GROQ_PREDETERMINADO = "openai/gpt-oss-120b"
 TOP_K_PREDETERMINADO = 4
 MAX_TOKENS_RESPUESTA = 2500  # los modelos de razonamiento gastan parte en pensar
 INTENTOS_GENERACION = 2
+MAX_TURNOS_HISTORIAL = 4  # hasta 2 intercambios previos (usuario+asistente)
+MAX_TOKENS_CONDENSACION = 120
 
 MENSAJE_SIN_EVIDENCIA = (
     "Mi especialidad es la crianza responsable y no encontré información "
@@ -161,12 +163,20 @@ class ChatRAG:
     def responder(
         self, mensaje: str, historial: list[dict[str, Any]] | None = None
     ) -> dict[str, Any]:
-        """Responde solo a partir del mensaje actual y evidencia recuperada.
+        """Responde al turno actual con evidencia recuperada y, si existe, el
+        intercambio inmediatamente anterior para resolver seguimientos.
 
-        `historial` se conserva por compatibilidad con clientes anteriores,
-        pero se ignora para evitar arrastre de temas y envío de datos al LLM.
+        El historial nunca decide el riesgo de seguridad (eso depende solo del
+        mensaje actual) ni aporta hechos: solo ayuda a (1) recuperar evidencia
+        cuando la pregunta sola no basta por tratarse de un seguimiento elíptico
+        ("¿y el segundo?") y (2) interpretar esas referencias en la generación.
         """
-        del historial
+        historial = [
+            turno
+            for turno in (historial or [])
+            if isinstance(turno, dict) and isinstance(turno.get("content"), str)
+        ][-MAX_TURNOS_HISTORIAL:]
+
         tipo_riesgo = self._clasificar_riesgo(mensaje)
         if tipo_riesgo:
             mensajes = {
@@ -183,6 +193,15 @@ class ChatRAG:
             )
 
         fragmentos = self.base_conocimiento.buscar(mensaje, limite=self.top_k)
+        consulta_resuelta = mensaje
+        if not fragmentos and historial:
+            consulta_recuperacion = self._consulta_de_seguimiento(mensaje, historial)
+            if consulta_recuperacion != mensaje:
+                fragmentos = self.base_conocimiento.buscar(
+                    consulta_recuperacion, limite=self.top_k
+                )
+                if fragmentos:
+                    consulta_resuelta = consulta_recuperacion
         if not fragmentos:
             return self._resultado(MENSAJE_SIN_EVIDENCIA, [], [], "no_evidence", None)
 
@@ -190,10 +209,14 @@ class ChatRAG:
         contextos = [fragmento.texto for fragmento in fragmentos]
 
         if not self.api_key:
-            return self._respuesta_local(mensaje, fragmentos, fuentes, contextos)
+            # En modo local, la extracción de frases debe filtrar con la misma
+            # consulta (resuelta) que encontró los fragmentos, o un seguimiento
+            # elíptico ("¿y el segundo?") no coincidiría con ninguna frase.
+            return self._respuesta_local(consulta_resuelta, fragmentos, fuentes, contextos)
 
+        contexto_previo = self._contexto_previo(historial)
         try:
-            respuesta = self._generar_con_groq(mensaje, fragmentos)
+            respuesta = self._generar_con_groq(mensaje, fragmentos, contexto_previo)
         except Exception:
             LOGGER.exception("No se pudo generar una respuesta válida con Groq")
             return self._respuesta_local(
@@ -223,6 +246,7 @@ class ChatRAG:
         self,
         mensaje: str,
         fragmentos: list[FragmentoConocimiento],
+        contexto_previo: str = "",
     ) -> str:
         """Genera una respuesta estructurada a partir de los fragmentos citados.
 
@@ -234,7 +258,7 @@ class ChatRAG:
             f"{fragmento.texto}"
             for indice, fragmento in enumerate(fragmentos, start=1)
         )
-        mensajes = build_prompt(mensaje, contexto)
+        mensajes = build_prompt(mensaje, contexto, contexto_previo)
         ultimo_error: Exception | None = None
         for intento in range(INTENTOS_GENERACION):
             contenido = self._llamar_groq(mensajes)
@@ -342,6 +366,86 @@ class ChatRAG:
                 "Esta orientación no reemplaza la atención de un profesional."
             )
         return "\n\n".join(partes)
+
+    # ------------------------------------------------------- seguimientos
+    def _consulta_de_seguimiento(
+        self, mensaje: str, historial: list[dict[str, Any]]
+    ) -> str:
+        """Reformula un seguimiento elíptico en una pregunta autónoma para buscar.
+
+        Solo se usa cuando `mensaje` solo no encontró evidencia. El resultado
+        se usa exclusivamente para recuperar fragmentos; la pregunta mostrada y
+        respondida sigue siendo la original.
+        """
+        if self.api_key:
+            return self._condensar_pregunta(mensaje, historial)
+        anterior = self._ultimo_mensaje_usuario(historial)
+        return f"{anterior} {mensaje}".strip() if anterior else mensaje
+
+    def _condensar_pregunta(
+        self, mensaje: str, historial: list[dict[str, Any]]
+    ) -> str:
+        """Pide al modelo una versión autónoma de la pregunta de seguimiento."""
+        anterior = self._ultimo_mensaje_usuario(historial)
+        if not anterior:
+            return mensaje
+        try:
+            completado = self._obtener_cliente().chat.completions.create(
+                model=self.modelo,
+                temperature=0,
+                max_completion_tokens=MAX_TOKENS_CONDENSACION,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Reescribe la ÚLTIMA pregunta como una pregunta completa "
+                            "e independiente, usando la pregunta anterior solo para "
+                            "resolver pronombres o referencias ('eso', 'el segundo', "
+                            "'y después'). No agregues datos nuevos ni la respondas. "
+                            "Responde solo con la pregunta reescrita, sin comillas."
+                        ),
+                    },
+                    {"role": "user", "content": f"Pregunta anterior: {anterior}"},
+                    {"role": "user", "content": f"Última pregunta: {mensaje}"},
+                ],
+            )
+            texto = (completado.choices[0].message.content or "").strip()
+            return texto or f"{anterior} {mensaje}"
+        except Exception:
+            LOGGER.warning(
+                "No se pudo condensar la pregunta de seguimiento", exc_info=True
+            )
+            return f"{anterior} {mensaje}"
+
+    @staticmethod
+    def _ultimo_mensaje_usuario(historial: list[dict[str, Any]]) -> str:
+        for turno in reversed(historial):
+            if turno.get("role") == "user":
+                contenido = turno.get("content", "")
+                if isinstance(contenido, str) and contenido.strip():
+                    return contenido.strip()
+        return ""
+
+    @staticmethod
+    def _contexto_previo(historial: list[dict[str, Any]]) -> str:
+        """Resumen breve del último intercambio, solo para interpretar referencias."""
+        ultimo_usuario = ultimo_asistente = ""
+        for turno in reversed(historial):
+            contenido = turno.get("content", "")
+            if not isinstance(contenido, str) or not contenido.strip():
+                continue
+            if turno.get("role") == "assistant" and not ultimo_asistente:
+                ultimo_asistente = contenido.strip()[:300]
+            elif turno.get("role") == "user" and not ultimo_usuario:
+                ultimo_usuario = contenido.strip()[:300]
+            if ultimo_usuario and ultimo_asistente:
+                break
+        if not ultimo_usuario:
+            return ""
+        bloque = f"Pregunta anterior: {ultimo_usuario}"
+        if ultimo_asistente:
+            bloque += f"\nRespuesta anterior (resumen): {ultimo_asistente}"
+        return bloque
 
     # ---------------------------------------------------------------- citas
     _PATRON_CITA = re.compile(r"\[Fuentes?\s+([\d,\sy]+)\]")

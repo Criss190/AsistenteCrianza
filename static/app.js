@@ -6,6 +6,9 @@ const suggestions = document.querySelector('#suggestions');
 const charCount = document.querySelector('#char-count');
 const knowledgeStatus = document.querySelector('#knowledge-status');
 
+const MAX_TURNOS_HISTORIAL = 8; // hasta 4 intercambios usuario/asistente
+let historial = [];
+
 function scrollToLatest() {
   window.requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
 }
@@ -136,12 +139,14 @@ async function sendMessage(text) {
     const response = await fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text }),
+      body: JSON.stringify({ message: text, history: historial }),
     });
     const result = await response.json();
     document.querySelector('#typing-indicator')?.remove();
     if (!response.ok) throw new Error(result.error || 'No fue posible enviar tu consulta.');
     addAssistantMessage(result);
+    historial.push({ role: 'user', content: text }, { role: 'assistant', content: result.answer || '' });
+    historial = historial.slice(-MAX_TURNOS_HISTORIAL);
   } catch (error) {
     document.querySelector('#typing-indicator')?.remove();
     addAssistantMessage({ answer: error.message || 'No se pudo conectar. Comprueba tu conexión e inténtalo de nuevo.', mode: 'no_evidence', sources: [] });

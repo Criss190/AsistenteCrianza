@@ -63,12 +63,25 @@ class ChatAppTests(unittest.TestCase):
         data = self.post("Siento que pierdo la paciencia y estoy a punto de gritar")
         self.assertNotEqual(data["mode"], "safety")
 
-    def test_history_is_ignored(self):
+    def test_unrelated_history_does_not_leak_into_safety_or_retrieval(self):
         data = self.client.post("/chat", json={
             "message": "¿Cuál es la capital de Francia?",
             "history": [{"role": "user", "content": "Mi hija me contó que un familiar la toca"}],
         }).get_json()
         self.assertEqual(data["mode"], "no_evidence")
+
+    def test_elliptical_follow_up_is_resolved_with_previous_turn(self):
+        primero = self.post("¿Cuáles son los Niveles de Respuesta frente a un comportamiento desafiante?")
+        self.assertEqual(primero["mode"], "local")
+        segundo = self.client.post("/chat", json={
+            "message": "¿Y el segundo nivel en qué consiste?",
+            "history": [
+                {"role": "user", "content": "¿Cuáles son los Niveles de Respuesta frente a un comportamiento desafiante?"},
+                {"role": "assistant", "content": primero["answer"]},
+            ],
+        }).get_json()
+        self.assertNotEqual(segundo["mode"], "no_evidence")
+        self.assertTrue(segundo["sources"])
 
     def test_out_of_scope_and_undocumented_topics_abstain(self):
         for texto in ("¿Cuál es la capital de Francia?", "¿Qué vacuna necesita un niño de tres años?",

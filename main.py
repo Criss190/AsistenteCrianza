@@ -43,11 +43,16 @@ def chat() -> Response | tuple[Response, int]:
         return jsonify(error="El mensaje debe tener 2.000 caracteres o menos."), 400
 
     historial = datos.get("history", [])
-    if not isinstance(historial, list) or any(
-        not isinstance(turno, dict)
-        or turno.get("role") not in {"user", "assistant"}
-        or not isinstance(turno.get("content"), str)
-        for turno in historial
+    if (
+        not isinstance(historial, list)
+        or len(historial) > 12
+        or any(
+            not isinstance(turno, dict)
+            or turno.get("role") not in {"user", "assistant"}
+            or not isinstance(turno.get("content"), str)
+            or len(turno.get("content", "")) > 4000
+            for turno in historial
+        )
     ):
         return jsonify(error="El historial debe contener turnos válidos."), 400
 
