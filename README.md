@@ -10,14 +10,14 @@ restringida a esa evidencia.
 ```mermaid
 flowchart LR
     A["Corpus seleccionado<br/>docs/base_conocimiento/"] --> B["Extracción<br/>PDF · DOCX · TXT · MD · HTML"]
-    B --> C["Fragmentación recursiva<br/>500 caracteres · 50 solapados"]
+    B --> C["Fragmentación por párrafo/frase<br/>900 car. · 120 solapados (sin cortar oraciones)"]
     C --> D["Embeddings locales<br/>all-MiniLM-L6-v2"]
     D --> E[("ChromaDB persistente<br/>vectorstore/")]
-    F["Pregunta del turno actual"] --> H["Búsqueda coseno + filtro<br/>top_k=3 · distancia ≤ 0.65"]
+    F["Pregunta + contexto del turno anterior"] --> H["Híbrido BM25 + coseno (RRF)<br/>top_k configurable"]
     E --> H
     H --> I{"¿Hay evidencia?"}
     I -- No --> J["Abstención explícita"]
-    I -- Sí --> K["System Prompt + Few-Shot<br/>delimitadores + evidencia"]
+    I -- Sí --> K["System Prompt + Few-Shot<br/>delimitadores + evidencia + contexto_previo"]
     K --> L["Groq opcional<br/>JSON validado"]
     L --> M["Respuesta + fuentes<br/>fragmento, archivo, página/sección"]
     J --> M
@@ -26,8 +26,8 @@ flowchart LR
 La auditoría y requisitos están en
 [docs/architecture/01-auditoria.md](docs/architecture/01-auditoria.md) y
 [docs/architecture/02-requisitos-y-casos-de-uso.md](docs/architecture/02-requisitos-y-casos-de-uso.md).
-El detalle del pipeline, sus limitaciones y el estado de evaluación está en
-[docs/flujo_completo_rag.md](docs/flujo_completo_rag.md).
+El detalle del pipeline, sus decisiones técnicas y el estado de evaluación
+están en [docs/flujo_completo_rag.md](docs/flujo_completo_rag.md).
 
 ### Corpus
 
@@ -40,21 +40,41 @@ Los documentos Markdown derivados de esos PDF siguen siendo formatos válidos.
 
 Los formatos aceptados son PDF, DOCX, TXT, Markdown y HTML (`.html`/`.htm`).
 PDF usa metadatos de página; DOCX/Markdown/HTML/TXT usan sección o nombre de
-archivo. El splitter es `RecursiveCharacterTextSplitter` de 500 caracteres,
-solapamiento de 50 y separadores por párrafo, salto de línea, espacio y
-carácter. Chroma persiste los textos, metadatos e índices en `vectorstore/`.
-El embedding explícito es `sentence-transformers/all-MiniLM-L6-v2`, ejecutado
-localmente por la función predeterminada de Chroma; es compacto y no requiere
-llaves ni llamadas remotas para vectorizar. Es una limitación conocida que no
-sea multilingüe y se documenta como mejora candidata.
+archivo. El splitter (`src/knowledge_base.py`) es propio, no
+`RecursiveCharacterTextSplitter`: agrupa párrafos completos y, si exceden el
+tamaño, baja a frases y luego a palabras, sin cortar nunca a mitad de oración;
+arrastra al fragmento siguiente las últimas unidades del anterior hasta el
+solapamiento configurado. El tamaño/solapamiento por defecto es 900/120
+caracteres, pero `.env`/Render los fijan en 500/50 vía `RAG_CHUNK_SIZE` y
+`RAG_CHUNK_OVERLAP` (ver sección de evaluación para la comparación entre
+configuraciones). Chroma persiste los textos, metadatos e índices en
+`vectorstore/`. El embedding explícito es `sentence-transformers/all-MiniLM-L6-v2`,
+ejecutado localmente por la función predeterminada de Chroma; es compacto y no
+requiere llaves ni llamadas remotas para vectorizar. Es una limitación conocida
+que no sea multilingüe y se documenta como mejora candidata.
 
-La búsqueda obtiene candidatos por similitud coseno; se conservan hasta tres
-fragmentos que cumplan distancia máxima 0.65 y un solapamiento léxico mínimo
-con la consulta actual. El historial visual no se envía al backend ni al LLM;
-formula cada seguimiento incluyendo el tema para evitar mezclar asuntos y
-reducir datos/tokens transmitidos. Sin evidencia aceptable, el asistente explica
-que su especialidad es la crianza responsable y que no encontró información
+La recuperación es híbrida: BM25 sobre raíces de palabras en español (señal
+principal, ponderada por coincidencia con la pregunta y su expansión al
+vocabulario TBRI) combinada con similitud coseno vía fusión por rango
+recíproco (RRF); se conservan hasta `top_k` fragmentos que superen un umbral
+mínimo de evidencia léxica. Si la pregunta sola no encuentra nada y hay un
+turno anterior, el sistema reintenta la búsqueda con la pregunta reformulada
+de forma autónoma (con Groq si hay clave, o por combinación léxica simple en
+modo local) para resolver seguimientos elípticos ("¿y el segundo?"). La
+clasificación de riesgo de seguridad depende solo del mensaje actual, nunca
+del historial. Sin evidencia aceptable, el asistente explica que su
+especialidad es la crianza responsable y que no encontró información
 suficiente para responder con seguridad.
+
+### Memoria conversacional
+
+El frontend mantiene el historial visual de la conversación (hasta 4
+intercambios) y lo envía con cada mensaje. El backend lo usa de dos formas: (1)
+como respaldo de recuperación cuando la pregunta actual sola no basta, y (2)
+como `contexto_previo` para la generación, exclusivamente para interpretar
+referencias ("eso", "el segundo") — nunca como fuente de hechos citables. El
+historial se trunca a los últimos turnos y nunca influye en la clasificación de
+riesgo, que siempre evalúa solo el mensaje actual.
 
 ## Instalación y ejecución
 
