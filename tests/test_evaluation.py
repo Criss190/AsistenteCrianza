@@ -80,7 +80,10 @@ class EvaluationDatasetTests(unittest.TestCase):
         fake_dataset = mock_patch(
             "eval_ragas.Dataset.from_list", return_value=object()
         )
-        mock_environment = {"GOOGLE_API_KEY": "configured"}
+        mock_environment = {
+            "GOOGLE_API_KEY": "configured",
+            "RAGAS_GROQ_DELAY_SEGUNDOS": "0",
+        }
         with tempfile.TemporaryDirectory() as temporary:
             result_path = Path(temporary) / "ragas-results.json"
             with (

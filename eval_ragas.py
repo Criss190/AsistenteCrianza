@@ -6,6 +6,7 @@ import json
 import math
 import os
 from pathlib import Path
+import time
 from typing import Any
 
 from datasets import Dataset
@@ -112,8 +113,13 @@ def recolectar_evidencia(
             "Aviso: GROQ_API_KEY no está configurada; se evaluará el modo "
             "extractivo local, no la generación real con Groq."
         )
+    espera = _entero_entorno("RAGAS_GROQ_DELAY_SEGUNDOS", 20, 0)
     evaluacion: list[dict[str, Any]] = []
-    for fila in datos:
+    for indice, fila in enumerate(datos):
+        if indice and chat.api_key and espera:
+            # El plan gratuito de Groq limita tokens por minuto; espaciar las
+            # llamadas evita que la generación caiga al modo local por 429.
+            time.sleep(espera)
         resultado = chat.responder(fila["question"])
         evaluacion.append(
             {
@@ -167,14 +173,15 @@ def main() -> None:
     juez = ChatGoogleGenerativeAI(
         model=os.getenv("RAGAS_LLM_MODEL", "gemini-3.8-flash"),
         temperature=0,
-        max_retries=0,
-        timeout=60,
+        max_retries=6,
+        timeout=120,
     )
     embeddings = LangchainEmbeddingsWrapper(
         GoogleGenerativeAIEmbeddings(
             model=os.getenv(
                 "RAGAS_EMBEDDING_MODEL", "models/gemini-embedding-001"
-            )
+            ),
+            max_retries=6,
         )
     )
     juez_ragas = LangchainLLMWrapper(juez)
@@ -202,7 +209,7 @@ def main() -> None:
             ],
             llm=juez_ragas,
             embeddings=embeddings,
-            run_config=RunConfig(timeout=90, max_retries=0, max_workers=1),
+            run_config=RunConfig(timeout=300, max_retries=6, max_workers=1),
             raise_exceptions=True,
         )
     finally:
