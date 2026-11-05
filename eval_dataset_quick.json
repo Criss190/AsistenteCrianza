@@ -1,0 +1,22 @@
+[
+  {
+    "question": "¿Cuáles son las tres reglas para las relaciones utilizadas en el grupo de cuidado según TBRI?",
+    "ground_truth": "Las tres reglas son: 1. Mantenerse juntos, 2. Sin lastimar (las heridas pueden ser internas o externas), y 3. Divertirse."
+  },
+  {
+    "question": "¿Qué significan las siglas de la Respuesta IDEAL en los Principios de Corrección de TBRI?",
+    "ground_truth": "Corresponden a: Inmediata (Immediate), Directa (Direct), Eficiente (Efficient), Basada en acciones (Action-based) y Enfocada al comportamiento, no al niño (Leveled at the behavior, not the child)."
+  },
+  {
+    "question": "¿Cuáles son los cuatro Niveles de Respuesta de TBRI frente a un comportamiento desafiante?",
+    "ground_truth": "Nivel 1: Interacción divertida, Nivel 2: Interacción estructurada, Nivel 3: Interacción para calmar, y Nivel 4: Interacción para proteger."
+  },
+  {
+    "question": "¿Qué funciones cumplen los sentidos según el documento de Principios de Empoderamiento de TBRI?",
+    "ground_truth": "Cumplen cuatro funciones principales: alertar al cuerpo y al cerebro sobre pistas importantes, proteger al cuerpo y al cerebro para no abrumarse, seleccionar qué es importante prestar atención, y organizar el cerebro y el comportamiento."
+  },
+  {
+    "question": "¿Cuál es la velocidad recomendada para la órbita de los satélites de baja altura alrededor de Marte?",
+    "ground_truth": "La información no se encuentra en la base de conocimientos."
+  }
+]
