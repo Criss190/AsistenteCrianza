@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from ragas.eval_ragas import (
+from scripts_ragas.eval_ragas import (
     _clasificar_dominio,
     _entero_entorno,
     cargar_dataset,
@@ -41,7 +41,7 @@ class EvaluationDatasetTests(unittest.TestCase):
         from unittest.mock import MagicMock
         from unittest.mock import patch as mock_patch
 
-        import ragas.eval_ragas as eval_ragas
+        import scripts_ragas.eval_ragas as eval_ragas
 
         datos = [
             {
@@ -78,7 +78,7 @@ class EvaluationDatasetTests(unittest.TestCase):
             }
         ]
         fake_dataset = mock_patch(
-            "eval_ragas.Dataset.from_list", return_value=object()
+            "scripts_ragas.eval_ragas.Dataset.from_list", return_value=object()
         )
         mock_environment = {
             "GOOGLE_API_KEY": "configured",
@@ -88,15 +88,15 @@ class EvaluationDatasetTests(unittest.TestCase):
             result_path = Path(temporary) / "ragas-results.json"
             with (
                 mock_patch.dict(os.environ, mock_environment),
-                mock_patch("eval_ragas.RESULTS_PATH", result_path),
-                mock_patch("eval_ragas.cargar_dataset", return_value=datos),
-                mock_patch("eval_ragas.ChatRAG", return_value=fake_chat),
+                mock_patch("scripts_ragas.eval_ragas.RESULTS_PATH", result_path),
+                mock_patch("scripts_ragas.eval_ragas.cargar_dataset", return_value=datos),
+                mock_patch("scripts_ragas.eval_ragas.ChatRAG", return_value=fake_chat),
                 fake_dataset as from_list,
-                mock_patch("eval_ragas.ChatGoogleGenerativeAI"),
-                mock_patch("eval_ragas.GoogleGenerativeAIEmbeddings"),
-                mock_patch("eval_ragas.LangchainEmbeddingsWrapper"),
-                mock_patch("eval_ragas.LangchainLLMWrapper"),
-                mock_patch("eval_ragas.evaluate", return_value=fake_result),
+                mock_patch("scripts_ragas.eval_ragas.ChatGoogleGenerativeAI"),
+                mock_patch("scripts_ragas.eval_ragas.GoogleGenerativeAIEmbeddings"),
+                mock_patch("scripts_ragas.eval_ragas.LangchainEmbeddingsWrapper"),
+                mock_patch("scripts_ragas.eval_ragas.LangchainLLMWrapper"),
+                mock_patch("scripts_ragas.eval_ragas.evaluate", return_value=fake_result),
             ):
                 ejecutar_evaluacion()
 

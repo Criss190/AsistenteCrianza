@@ -2,7 +2,7 @@
 
 Este documento recoge, en un solo lugar, cada decisión técnica del pipeline
 RAG de extremo a extremo (Avance 2) y los resultados de su evaluación con
-Ragas. El código referenciado vive en `src/` y `eval_ragas.py`; el README
+Ragas. El código referenciado vive en `src/` y `scripts_ragas/eval_ragas.py`; el README
 resume la puesta en marcha.
 
 ## 1. Selección de documentos
@@ -160,20 +160,20 @@ pregunta ya resuelta).
 
 ### 8.1 Conjunto de evaluación
 
-`eval_dataset.json`: 15 preguntas con `ground_truth` — 12 en dominio
+`scripts_ragas/questions/eval_dataset.json`: 15 preguntas con `ground_truth` — 12 en dominio
 (cubren los cinco documentos del corpus) y 3 fuera de dominio (satélites de
 Marte, impuestos en Colombia, Tratado de Versalles) para medir control de
 alucinaciones. Las métricas de Ragas se calculan solo sobre las 12 preguntas
 en dominio: `context_recall` no es una medida válida cuando el
 `ground_truth` dice explícitamente "la información no está en el corpus"; en
 su lugar, para las 3 fuera de dominio se reporta la tasa de abstención
-correcta (`eval_ragas.py`).
+correcta (`scripts_ragas/eval_ragas.py`).
 
 ### 8.2 Resultados — configuración exploratoria inicial (chunk 500/50, top_k=3)
 
 Ejecutado con generación real de Groq (modelo `openai/gpt-oss-120b`) y juez
 Ragas `gemini-3.5-flash-lite` (resultado completo en
-[`ragas_baseline.json`](../ragas_baseline.json)):
+[`ragas_baseline.json`](../scripts_ragas/results/ragas_baseline.json)):
 
 | Métrica | Valor |
 |---|---|
@@ -214,7 +214,7 @@ documentos TBRI).
 A partir del diagnóstico de 8.2 (recuperación incompleta), se cambiaron dos
 parámetros relacionados — tamaño/solapamiento de chunk y `top_k` — y se
 volvió a correr la evaluación completa (resultado en
-[`ragas_900_120_4.json`](../ragas_900_120_4.json)):
+[`ragas_900_120_4.json`](../scripts_ragas/results/ragas_900_120_4.json)):
 
 | Métrica | Antes (500/50, top_k=3) | Después (900/120, top_k=4) | Δ |
 |---|---|---|---|

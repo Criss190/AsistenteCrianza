@@ -109,7 +109,7 @@ extractivo. Abre `http://localhost:5000`.
 
 ## Evaluación Ragas
 
-`eval_dataset.json` contiene 15 preguntas: 12 en dominio y 3 fuera de dominio,
+`scripts_ragas/questions/eval_dataset.json` contiene 15 preguntas: 12 en dominio y 3 fuera de dominio,
 con `ground_truth`. Las cuatro métricas Ragas se calculan solo para las
 preguntas en dominio, donde la referencia representa contenido recuperable.
 Para las preguntas fuera de dominio se reporta por separado la tasa de
@@ -117,11 +117,11 @@ abstención correcta; `context_recall` no es una medida válida para una
 referencia que explícitamente dice que el dato no está en el corpus.
 
 ```bash
-GOOGLE_API_KEY=... python eval_ragas.py
+GOOGLE_API_KEY=... python scripts_ragas/eval_ragas.py
 ```
 
 El script carga `.env`, usa Gemini configurado en `RAGAS_LLM_MODEL` y
-`RAGAS_EMBEDDING_MODEL`, imprime promedios y guarda `ragas_results.json`
+`RAGAS_EMBEDDING_MODEL`, imprime promedios y guarda `scripts_ragas/results/ragas_results.json`
 (o la ruta indicada en `RAGAS_RESULTS_PATH`). La clave y el modelo de Google
 deben tener cuota disponible; el plan gratuito de algunos modelos de Gemini
 (p. ej. `gemini-3.8-flash`) limita a 5 solicitudes/minuto, insuficiente para
@@ -131,7 +131,7 @@ de forma confiable.
 **Resultados reales** (análisis completo, con atribución por componente, en
 [docs/flujo_completo_rag.md](docs/flujo_completo_rag.md#8-evaluación-con-ragas)):
 
-| Métrica | 500/50, top_k=3 ([json](ragas_baseline.json)) | 900/120, top_k=4 — adoptada ([json](ragas_900_120_4.json)) |
+| Métrica | 500/50, top_k=3 ([json](scripts_ragas/results/ragas_baseline.json)) | 900/120, top_k=4 — adoptada ([json](scripts_ragas/results/ragas_900_120_4.json)) |
 |---|---|---|
 | faithfulness | 0.555 | 0.540 |
 | answer_relevancy | 0.693 | 0.614 |

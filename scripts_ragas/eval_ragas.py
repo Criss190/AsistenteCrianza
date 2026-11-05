@@ -6,8 +6,17 @@ import json
 import math
 import os
 from pathlib import Path
+import sys
 import time
 from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    # Permite `from src...` tanto si se ejecuta como script
+    # (`python scripts_ragas/eval_ragas.py`) como si se importa
+    # (`python -m scripts_ragas.eval_ragas`, o desde los tests).
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from datasets import Dataset
 from dotenv import load_dotenv
@@ -30,13 +39,12 @@ from ragas.run_config import RunConfig
 from src.rag_chat import ChatRAG
 
 
-ROOT = Path(__file__).resolve().parent
-load_dotenv(ROOT / ".env")
+load_dotenv(PROJECT_ROOT / ".env")
 DATASET_PATH = Path(
-    os.getenv("RAGAS_EVAL_DATASET", str(ROOT / "eval_dataset.json"))
+    os.getenv("RAGAS_EVAL_DATASET", str(SCRIPT_DIR / "questions" / "eval_dataset.json"))
 )
 RESULTS_PATH = Path(
-    os.getenv("RAGAS_RESULTS_PATH", str(ROOT / "ragas_results.json"))
+    os.getenv("RAGAS_RESULTS_PATH", str(SCRIPT_DIR / "results" / "ragas_results.json"))
 ).resolve()
 METRIC_NAMES = (
     "faithfulness",
