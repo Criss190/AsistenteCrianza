@@ -149,8 +149,10 @@ detectar cambios en el corpus o en estos parámetros.
 
 ## Despliegue
 
-La configuración recomendada es Railway (Flask + Gunicorn); los parámetros
-están en `railway.json`. Para publicarla:
+La configuración recomendada es Railway (Flask + Gunicorn); `railway.json`
+selecciona el `Dockerfile` para construir con Python 3.12, sin depender de
+`mise` ni de su verificación de versiones Python. La imagen instala solo las
+dependencias necesarias para atender el chat. Para publicarla:
 
 1. En Railway, crea un proyecto con **Deploy from GitHub repo** y selecciona
    `Criss190/AsistenteCrianza` (o conecta tu fork).
