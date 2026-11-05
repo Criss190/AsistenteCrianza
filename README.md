@@ -149,16 +149,29 @@ detectar cambios en el corpus o en estos parámetros.
 
 ## Despliegue
 
-El blueprint de Render está en `render.yaml`. Conecta el repositorio como
-Blueprint y configura `GROQ_API_KEY` como secreto; `GROQ_MODEL` tiene un valor
-predeterminado. El comando de inicio es Gunicorn con un worker y crea el
-índice al arrancar. El almacenamiento del plan gratuito puede ser efímero,
-por lo que el índice se reconstruye en cada despliegue.
+La configuración recomendada es Railway (Flask + Gunicorn); los parámetros
+están en `railway.json`. Para publicarla:
+
+1. En Railway, crea un proyecto con **Deploy from GitHub repo** y selecciona
+   `Criss190/AsistenteCrianza` (o conecta tu fork).
+2. En las variables del servicio, agrega `GROQ_API_KEY` como secreto para
+   habilitar respuestas generativas. `GROQ_MODEL` es opcional; por defecto es
+   `openai/gpt-oss-120b`. Sin la clave, la app sigue funcionando en modo local.
+3. Para conservar el índice entre despliegues, agrega un volumen al servicio
+   montado en `/data` y define `RAG_VECTORSTORE_DIR=/data`. Sin volumen,
+   Chroma se reconstruye desde los documentos versionados al iniciar.
+4. Espera a que el health check de `/api/health` pase y abre el dominio público
+   que Railway genera en **Settings → Networking → Generate Domain**.
+5. Comprueba que `/api/health` devuelva `status: "ok"`, `knowledge_chunks`
+   mayor que cero y, si configuraste la clave, `llm_configured: true`.
+
+Railway puede requerir un plan con créditos o facturación habilitada; revisa
+sus precios antes de publicar. No subas `.env` ni pegues claves en GitHub. El
+archivo `render.yaml` se conserva para el despliegue alternativo en Render.
 
 - Repositorio: [github.com/Criss190/AsistenteCrianza](https://github.com/Criss190/AsistenteCrianza)
-- URL pública: pendiente de verificar. La dirección probada
-  `https://crianzapp.onrender.com` respondió HTTP 404; no debe presentarse
-  como despliegue funcional hasta confirmar la URL generada por Render.
+- URL pública: se genera al crear el dominio en el proveedor; aún no está
+  configurada ni verificada.
 
 ## Alcance y seguridad
 

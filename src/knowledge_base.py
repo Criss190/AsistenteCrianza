@@ -15,6 +15,7 @@ import hashlib
 from html.parser import HTMLParser
 import logging
 import math
+import os
 from pathlib import Path
 import re
 import unicodedata
@@ -596,7 +597,10 @@ class BaseConocimientoLocal:
         ruta_vectorstore = (
             Path(directorio_vectorstore).resolve()
             if directorio_vectorstore
-            else ruta.parent.parent / "vectorstore"
+            else Path(
+                os.getenv("RAG_VECTORSTORE_DIR", "").strip()
+                or ruta.parent.parent / "vectorstore"
+            ).resolve()
         )
 
         documentos: list[dict[str, Any]] = []

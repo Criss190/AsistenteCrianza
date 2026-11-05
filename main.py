@@ -24,7 +24,7 @@ def inicio() -> str:
 
 @app.get("/api/health")
 def health() -> Response:
-    """Estado mínimo para comprobaciones de disponibilidad de Render."""
+    """Estado mínimo para comprobaciones de disponibilidad del servicio."""
     return jsonify(chat_rag.estado())
 
 

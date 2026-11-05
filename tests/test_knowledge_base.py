@@ -2,6 +2,7 @@ from pathlib import Path
 import re
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from docx import Document
 from pypdf import PdfWriter
@@ -84,6 +85,25 @@ class KnowledgeBaseLoaderTests(unittest.TestCase):
         self.assertEqual(html[0][1]["section"], "Encabezado útil")
         self.assertIn("Texto visible para indexar.", html[0][0])
         self.assertNotIn("secreto", " ".join(texto for texto, _ in html))
+
+    def test_vectorstore_directory_can_be_configured_with_environment(self):
+        with TemporaryDirectory() as directorio:
+            raiz = Path(directorio)
+            corpus = raiz / "corpus"
+            corpus.mkdir()
+            (corpus / "guia.md").write_text(
+                "# Crianza\nContenido útil.", encoding="utf-8"
+            )
+            vectorstore = raiz / "persistente"
+
+            with patch.dict("os.environ", {"RAG_VECTORSTORE_DIR": str(vectorstore)}):
+                with patch(
+                    "src.knowledge_base.BaseConocimientoLocal._preparar_vectores",
+                    return_value=(object(), object()),
+                ) as preparar_vectores:
+                    BaseConocimientoLocal.cargar(corpus)
+
+            self.assertEqual(preparar_vectores.call_args.args[2], vectorstore.resolve())
 
 
 class KnowledgeBaseRetrievalTests(unittest.TestCase):
