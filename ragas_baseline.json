@@ -1,0 +1,172 @@
+{
+  "pipeline": {
+    "chunk_size": 500,
+    "chunk_overlap": 50,
+    "top_k": 3,
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2"
+  },
+  "evaluation": {
+    "in_domain_count": 12,
+    "out_of_domain_count": 3,
+    "correct_abstentions": 3,
+    "out_of_domain_abstention_rate": 1.0
+  },
+  "metrics": {
+    "faithfulness": 0.555050505050505,
+    "answer_relevancy": 0.6925712430643096,
+    "context_precision": 0.4166666666291667,
+    "context_recall": 0.3333333333333333
+  },
+  "results": [
+    {
+      "question": "¿Cuáles son las tres reglas para las relaciones utilizadas en el grupo de cuidado según TBRI?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": 0.375,
+      "answer_relevancy": 0.7452713293805182,
+      "context_precision": 0.9999999999,
+      "context_recall": 1.0
+    },
+    {
+      "question": "¿Qué significan las siglas de la Respuesta IDEAL en los Principios de Corrección de TBRI?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": 0.6666666666666666,
+      "answer_relevancy": 0.7256920228864786,
+      "context_precision": 0.99999999995,
+      "context_recall": 1.0
+    },
+    {
+      "question": "¿Cuáles son los cuatro Niveles de Respuesta de TBRI frente a un comportamiento desafiante?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": 0.8362420805729981,
+      "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "¿Qué funciones cumplen los sentidos según el documento de Principios de Empoderamiento de TBRI?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": 0.8,
+      "answer_relevancy": 0.7553548789135909,
+      "context_precision": 0.9999999999,
+      "context_recall": 1.0
+    },
+    {
+      "question": "¿Qué son los sentidos internos descritos en TBRI y en qué consisten?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": 0.25,
+      "answer_relevancy": 0.7491799588011844,
+      "context_precision": 0.9999999999,
+      "context_recall": 0.0
+    },
+    {
+      "question": "¿Por qué es tan importante la hidratación y el control de la glucemia cada dos horas en niños con antecedentes difíciles?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": 0.3333333333333333,
+      "answer_relevancy": 0.7398306912324304,
+      "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "¿Qué conductas presentan los bebés con un estilo de apego evitativo según Bowlby/TBRI?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": 0.0,
+      "answer_relevancy": 0.7441708943512101,
+      "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "¿Cuáles son las tres estrategias para relacionarse que se trabajan en los Principios de Conexión de TBRI?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": 0.625,
+      "answer_relevancy": 0.7865967485515332,
+      "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "Según el artículo de Gómez Muzzio et al. (2008), ¿qué es la sensibilidad parental según Ainsworth?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.8037295880871881,
+      "context_precision": 0.9999999999,
+      "context_recall": 1.0
+    },
+    {
+      "question": "¿Qué tres modalidades de psicoterapia basadas en evidencia se revisan en el artículo de Gómez Muzzio (2008)?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": 0.5,
+      "answer_relevancy": 0.0,
+      "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "Según la revisión sistemática de Lin-Lewry et al. (2024), ¿qué efectos tienen las intervenciones digitales en los padres durante el primer año postparto?",
+      "domain": "in_domain",
+      "mode": "groq",
+      "correct_abstention": null,
+      "faithfulness": 0.5555555555555556,
+      "answer_relevancy": 0.7850258922726135,
+      "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "¿Qué moderadores o factores clave incrementaron la efectividad de las intervenciones digitales según Lin-Lewry et al. (2024)?",
+      "domain": "in_domain",
+      "mode": "local",
+      "correct_abstention": null,
+      "faithfulness": 1.0,
+      "answer_relevancy": 0.6397608317219687,
+      "context_precision": 0.0,
+      "context_recall": 0.0
+    },
+    {
+      "question": "¿Cuál es la velocidad recomendada para la órbita de los satélites de baja altura alrededor de Marte?",
+      "domain": "out_of_domain",
+      "mode": "no_evidence",
+      "correct_abstention": true,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Cuáles son las tasas actuales del impuesto a la renta para empresas en Colombia?",
+      "domain": "out_of_domain",
+      "mode": "no_evidence",
+      "correct_abstention": true,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿En qué año se firmó el tratado de paz de la Primera Guerra Mundial en Versalles?",
+      "domain": "out_of_domain",
+      "mode": "no_evidence",
+      "correct_abstention": true,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    }
+  ]
+}
