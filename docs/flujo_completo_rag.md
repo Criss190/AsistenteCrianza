@@ -57,15 +57,17 @@ Implementado en `_fragmentar`/`_unidades_de_texto`
    anterior, hasta cubrir el solapamiento configurado, para no perder
    contexto en el límite.
 
-**Parámetros:** por defecto 900 caracteres / 120 de solapamiento
-(`TAMANO_FRAGMENTO`/`SOLAPAMIENTO_FRAGMENTO`); el despliegue (`.env` y
-Render) los fija en **500/50** vía `RAG_CHUNK_SIZE`/`RAG_CHUNK_OVERLAP`.
-Justificación: los documentos TBRI están escritos en párrafos cortos y
-viñetas; 500 caracteres mantiene cada fragmento centrado en una sola idea
-(una estrategia, un nivel de respuesta) sin mezclar dos secciones distintas,
-y el solapamiento de 50 basta para no perder el encabezado de sección que
-antecede a cada fragmento. La sección 6 compara esta configuración contra
-`top_k` más alto como iteración de mejora.
+**Parámetros adoptados: 900 caracteres / 120 de solapamiento**
+(`TAMANO_FRAGMENTO`/`SOLAPAMIENTO_FRAGMENTO` en
+[src/knowledge_base.py](../src/knowledge_base.py)). Render no sobreescribe
+`RAG_CHUNK_SIZE`/`RAG_CHUNK_OVERLAP`, así que el despliegue usa estos valores
+por defecto; `.env` los fija explícitamente para que el entorno local
+coincida. La sección 8 documenta que se probó primero 500/50 (chunks más
+pequeños, centrados en una sola idea) y se adoptó 900/120 tras comparar
+métricas reales de Ragas: el recuperador encontraba evidencia incompleta
+porque algunas respuestas (p. ej. las "tres modalidades de psicoterapia" de
+Gómez Muzzio) quedan repartidas entre fragmentos consecutivos a 500
+caracteres, y chunks más grandes con más solapamiento las mantienen juntas.
 
 ## 4. Vectorización
 
@@ -111,8 +113,8 @@ Híbrida, en `BaseConocimientoLocal.buscar`:
   BM25 y coincide en al menos dos señales de contenido (evita que una
   palabra suelta compartida con una pregunta ajena al corpus cuente como
   evidencia).
-- `top_k` es configurable por entorno (`RAG_TOP_K`, por defecto 4; el
-  despliegue usa 3).
+- `top_k` es configurable por entorno (`RAG_TOP_K`); el valor adoptado y
+  usado en despliegue es 4 (ver sección 8).
 
 **Seguimientos conversacionales:** si la pregunta sola no encuentra
 evidencia y existe un turno anterior, el sistema reintenta la búsqueda con
@@ -167,13 +169,85 @@ en dominio: `context_recall` no es una medida válida cuando el
 su lugar, para las 3 fuera de dominio se reporta la tasa de abstención
 correcta (`eval_ragas.py`).
 
-### 8.2 Resultados
+### 8.2 Resultados — configuración exploratoria inicial (chunk 500/50, top_k=3)
 
-<!-- RESULTADOS_RAGAS -->
+Ejecutado con generación real de Groq (modelo `openai/gpt-oss-120b`) y juez
+Ragas `gemini-3.5-flash-lite` (resultado completo en
+[`ragas_baseline.json`](../ragas_baseline.json)):
 
-### 8.3 Iteración de mejora
+| Métrica | Valor |
+|---|---|
+| faithfulness | 0.555 |
+| answer_relevancy | 0.693 |
+| context_precision | 0.417 |
+| context_recall | 0.333 |
 
-<!-- ITERACION_RAGAS -->
+Control de alucinaciones: **3/3 (100%)** de las preguntas fuera de dominio
+(satélites de Marte, impuestos en Colombia, Tratado de Versalles) se
+abstuvieron correctamente, sin inventar una respuesta.
+
+**Análisis — la métrica más baja es `context_recall` (0.33), seguida de
+`context_precision` (0.42).** Ambas son de **recuperación**, no de
+generación: en varias preguntas (p. ej. *"¿Qué conductas presentan los
+bebés con un estilo de apego evitativo según Bowlby/TBRI?"*,
+*"¿Qué tres modalidades de psicoterapia... Gómez Muzzio?"*) `context_precision`
+y `context_recall` caen a 0.0 porque el fragmento con la respuesta exacta no
+quedó entre los `top_k=3` recuperados, aunque Groq igual generó una
+respuesta razonable apoyándose parcialmente en conocimiento general — lo que
+también explica por qué `faithfulness` (0.56) es mediocre en esas mismas
+filas: el modelo no tenía la evidencia correcta para anclar la respuesta.
+`answer_relevancy` (0.69) es la más sana: las respuestas sí contestan lo que
+se pregunta, el problema es que no siempre están respaldadas por el
+fragmento correcto.
+
+**Causa atribuida:** chunking/recuperación, no el prompt de generación. Con
+chunks de 500 caracteres algunas respuestas completas (como los "tres
+modalidades de psicoterapia") quedan repartidas entre dos fragmentos
+consecutivos, y `top_k=3` a veces no alcanza a traer ambos. La mejora
+candidata más directa es subir `top_k` (sección 8.3); si no fuera
+suficiente, el siguiente paso sería revisar el solapamiento o el criterio de
+corte para esos documentos académicos (que tienen prosa más larga que los
+documentos TBRI).
+
+### 8.3 Iteración de mejora — chunk 900/120, top_k=4 (configuración adoptada)
+
+A partir del diagnóstico de 8.2 (recuperación incompleta), se cambiaron dos
+parámetros relacionados — tamaño/solapamiento de chunk y `top_k` — y se
+volvió a correr la evaluación completa (resultado en
+[`ragas_900_120_4.json`](../ragas_900_120_4.json)):
+
+| Métrica | Antes (500/50, top_k=3) | Después (900/120, top_k=4) | Δ |
+|---|---|---|---|
+| faithfulness | 0.555 | 0.540 | −0.015 |
+| answer_relevancy | 0.693 | 0.614 | −0.079 |
+| context_precision | 0.417 | 0.569 | **+0.153** |
+| context_recall | 0.333 | 0.409 | **+0.076** |
+| Abstención fuera de dominio | 3/3 (100%) | 3/3 (100%) | sin cambio |
+
+**Lectura del resultado — mejora real pero con un costo, no una victoria
+limpia.** Chunks más grandes con más solapamiento sí ayudaron al objetivo
+buscado: `context_precision` y `context_recall` suben, porque fragmentos más
+grandes capturan respuestas completas que antes quedaban cortadas (p. ej. la
+pregunta de "apego evitativo" pasó de `context_recall=0.0` a tener evidencia
+relevante en varias filas). Pero `answer_relevancy` y `faithfulness` bajan
+un poco: fragmentos más grandes también traen más texto no relacionado con
+la pregunta puntual, lo que le da a Groq más oportunidad de desviarse del
+tema exacto o de mezclar ideas de la misma sección. El caso más claro es la
+fila de "tres modalidades de psicoterapia" (Gómez Muzzio): en ambas
+configuraciones el recuperador sigue sin traer el fragmento correcto
+(`context_precision=0`), por lo que ese fallo concreto no se debe al tamaño
+de chunk sino a que ese documento tiene prosa densa y poco repetitiva —
+candidato a una tercera iteración enfocada en ese documento específico
+(fragmentos aún más pequeños solo para los PDF académicos, o un chunking por
+oración en vez de por tamaño fijo).
+
+**Decisión:** se adoptó 900/120/top_k=4 porque el objetivo prioritario de
+esta iteración era el cuello de botella identificado en 8.2 (recuperación,
+no generación), y ambas métricas de recuperación mejoran de forma
+consistente sin afectar el control de alucinaciones (la abstención fuera de
+dominio se mantiene en 100%). La caída en `answer_relevancy`/`faithfulness`
+queda documentada como mejora pendiente para una siguiente iteración sobre
+el prompt o el chunking específico de los artículos académicos.
 
 ## 9. Interfaz y despliegue
 

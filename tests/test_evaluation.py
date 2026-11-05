@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from eval_ragas import (
+from ragas.eval_ragas import (
     _clasificar_dominio,
     _entero_entorno,
     cargar_dataset,
@@ -41,7 +41,7 @@ class EvaluationDatasetTests(unittest.TestCase):
         from unittest.mock import MagicMock
         from unittest.mock import patch as mock_patch
 
-        import eval_ragas
+        import ragas.eval_ragas as eval_ragas
 
         datos = [
             {

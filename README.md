@@ -99,9 +99,12 @@ extractivo. Abre `http://localhost:5000`.
 - `GET /`: interfaz de conversación.
 - `GET /api/health`: disponibilidad, cantidad de chunks y estado del LLM; no
   devuelve secretos.
-- `POST /chat` y alias `POST /api/chat`: JSON `{ "message": "..." }`; el
-  campo `history` antiguo se acepta pero se ignora. Devuelve
-  `respuesta`, `fuentes`, `mode` y `notice`, además de alias en inglés.
+- `POST /chat` y alias `POST /api/chat`: JSON `{ "message": "...", "history": [...] }`.
+  `history` son los últimos turnos `{role, content}` de la conversación (el
+  frontend conserva hasta 4 intercambios); el backend los usa para resolver
+  seguimientos elípticos y dar contexto a la generación, nunca como fuente de
+  hechos ni para decidir riesgo de seguridad. Devuelve `respuesta`, `fuentes`,
+  `mode` y `notice`, además de alias en inglés.
 - Las fuentes tienen archivo, extracto, `chunk_id` y página/sección disponible.
 
 ## Evaluación Ragas
@@ -118,25 +121,31 @@ GOOGLE_API_KEY=... python eval_ragas.py
 ```
 
 El script carga `.env`, usa Gemini configurado en `RAGAS_LLM_MODEL` y
-`RAGAS_EMBEDDING_MODEL`, imprime promedios y guarda `ragas_results.json`.
-La clave y el endpoint de Google deben tener cuota y acceso a ambos modelos.
-No se deben informar resultados hasta que el proceso termine y guarde el JSON.
+`RAGAS_EMBEDDING_MODEL`, imprime promedios y guarda `ragas_results.json`
+(o la ruta indicada en `RAGAS_RESULTS_PATH`). La clave y el modelo de Google
+deben tener cuota disponible; el plan gratuito de algunos modelos de Gemini
+(p. ej. `gemini-3.8-flash`) limita a 5 solicitudes/minuto, insuficiente para
+esta evaluación — `RAGAS_LLM_MODEL=gemini-3.5-flash-lite` (15/min) funciona
+de forma confiable.
 
-Para reproducir una iteración y guardar sus resultados aparte:
+**Resultados reales** (análisis completo, con atribución por componente, en
+[docs/flujo_completo_rag.md](docs/flujo_completo_rag.md#8-evaluación-con-ragas)):
 
-```bash
-RAG_CHUNK_SIZE=500 RAG_CHUNK_OVERLAP=50 RAG_TOP_K=3 \
-RAGAS_RESULTS_PATH=ragas_baseline.json python eval_ragas.py
+| Métrica | 500/50, top_k=3 ([json](ragas_baseline.json)) | 900/120, top_k=4 — adoptada ([json](ragas_900_120_4.json)) |
+|---|---|---|
+| faithfulness | 0.555 | 0.540 |
+| answer_relevancy | 0.693 | 0.614 |
+| context_precision | 0.417 | 0.569 |
+| context_recall | 0.333 | 0.409 |
+| Abstención fuera de dominio | 3/3 (100%) | 3/3 (100%) |
 
-RAG_CHUNK_SIZE=500 RAG_CHUNK_OVERLAP=50 RAG_TOP_K=4 \
-RAGAS_RESULTS_PATH=ragas_topk4.json python eval_ragas.py
-```
-
-El índice se reconstruye al detectar cambios en el corpus o configuración de
-fragmentación. Compara los promedios de los cuatro scores y la tasa de
-abstención; adopta el cambio solo si mejora las métricas pertinentes sin
-degradar la abstención. Estos comandos describen el protocolo, no resultados
-ya medidos.
+La métrica más baja en ambas corridas es de recuperación
+(`context_recall`/`context_precision`), no de generación: varios fragmentos
+con la respuesta exacta no entraban en el `top_k`. Subir chunk/overlap/top_k
+mejoró ambas métricas de recuperación a costa de una pequeña baja en
+`answer_relevancy`/`faithfulness` (fragmentos más grandes traen más texto
+no relacionado con la pregunta puntual). El índice se reconstruye solo al
+detectar cambios en el corpus o en estos parámetros.
 
 ## Despliegue
 
