@@ -210,7 +210,11 @@ def main() -> None:
             llm=juez_ragas,
             embeddings=embeddings,
             run_config=RunConfig(timeout=300, max_retries=6, max_workers=1),
-            raise_exceptions=True,
+            # El plan gratuito de Google limita solicitudes por minuto; una
+            # sola llamada agotada no debe descartar toda la corrida. Ragas
+            # devuelve NaN para la métrica afectada y el resto de filas queda
+            # intacto; el bloque de abajo ya tolera NaN al promediar/guardar.
+            raise_exceptions=False,
         )
     finally:
         for metrica, llm_anterior in zip(
