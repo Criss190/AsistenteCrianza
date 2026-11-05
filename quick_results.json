@@ -1,0 +1,51 @@
+[
+  {
+    "user_input":"¿Cuáles son las tres reglas para las relaciones utilizadas en el grupo de cuidado según TBRI?",
+    "retrieved_contexts":[
+      "Estrategias proactivas de TBRI®: aplicación\n\nLos cuidadores pueden escoger una parte del grupo de cuidado para inculcar rutinas, o comenzar con una parte y agregar más con el tiempo.\n\nParte\n\n1: tres reglas para las relaciones\n\nCada grupo comienza con las tres reglas de Theraplay® para Grupos, recordándoles a los niños que estas son reglas para escuelas, familias, organizaciones, amigos y amigas, etc.\n\nLas tres reglas son:\n\n1. \"¡Mantenerse juntos!\"\n\n2. \"¡Sin lastimar!\"\n\n▪ Las heridas pueden ser internas o externas.\n\n3. \"¡Divertirse!\""
+    ],
+    "response":"Entiendo que quieras claridad sobre esas normas; es importante contar con guías concretas para el grupo de cuidado.\n\nQué puedes intentar:\n• Recuerda y comparte con el grupo las tres reglas de Theraplay®: \"¡Mantenerse juntos!\", \"¡Sin lastimar!\" y \"¡Divertirse!\" [Fuente 1]",
+    "reference":"Las tres reglas son: 1. Mantenerse juntos, 2. Sin lastimar (las heridas pueden ser internas o externas), y 3. Divertirse.",
+    "faithfulness":0.3333333333,
+    "answer_relevancy":0.7273012001,
+    "context_precision":0.9999999999,
+    "context_recall":1.0
+  },
+  {
+    "user_input":"¿Qué significan las siglas de la Respuesta IDEAL en los Principios de Corrección de TBRI?",
+    "retrieved_contexts":[
+      "Principios de Corrección de TBRI®: Juntando las piezas\n\nTérminos de valor para la vida: escuchar y obedecer (1ª vez)\n\nGuiones de comportamiento: opciones\n\nGuiones de comportamiento: acuerdos\n\nGuiones de comportamiento: repeticiones\n\nRespuesta IDEAL©: inmediata\n\nRespuesta IDEAL©: directa (comprometida - más arriba)\n\nRespuesta IDEAL©: eficiente (niveles - más abajo)\n\nRespuesta IDEAL©: basada en acciones (p. ej., repetición)\n\nRespuesta IDEAL©: enfocada al comportamiento, no al niño\n\nNiveles de Respuesta™: Interacción divertida",
+      "Estrategias de respuesta de TBRI®: la Respuesta IDEAL©\n\nQué es la Respuesta IDEAL©\n\nImmediate (inmediata)\n\n• Las respuestas inmediatas ocurren dentro de 3 segundos del comportamiento, porque el cerebro solo retiene información en la memoria a corto plazo por unos pocos segundos.\n\n• Es por eso que cuando usted aborda rápido el comportamiento desafiante, los niños tienen mejor capacidad para aprender de la experiencia.\n\n° Hace que el comportamiento recupere el rumbo rápidamente\n\nDirect (directa)"
+    ],
+    "response":"Entiendo tu curiosidad por descifrar esas siglas; es importante conocer bien las herramientas que usamos con los niños.\n\nQué puedes intentar:\n• I = Immediate (inmediata): responde al comportamiento dentro de los 3 segundos para que el niño lo asocie rápidamente [Fuente 2].\n• D = Direct (directa): la respuesta debe ser clara y comprometida, sin ambigüedades [Fuente 1].\n• E = Efficient (eficiente): adapta la respuesta al nivel del niño, usando guiones de comportamiento adecuados [Fuente 1].\n• A = Action‑based (basada en acciones): enfócate en la conducta que se quiere cambiar, no en la persona del niño [Fuente 1].\n\nLo que la guía no cubre: La guía no detalla ejemplos específicos de cómo aplicar cada letra en situaciones concretas.",
+    "reference":"Corresponden a: Inmediata (Immediate), Directa (Direct), Eficiente (Efficient), Basada en acciones (Action-based) y Enfocada al comportamiento, no al niño (Leveled at the behavior, not the child).",
+    "faithfulness":0.4545454545,
+    "answer_relevancy":0.688380211,
+    "context_precision":1.0,
+    "context_recall":1.0
+  },
+  {
+    "user_input":"¿Cuáles son los cuatro Niveles de Respuesta de TBRI frente a un comportamiento desafiante?",
+    "retrieved_contexts":[
+      "Ver los Principios de Empoderamiento de TBRI® en acción\n\nGuiones de comportamiento: acuerdos\n\nGuiones de comportamiento: repeticiones\n\nRespuesta IDEAL©: inmediata\n\nRespuesta IDEAL©: directa (comprometida - más arriba)\n\nRespuesta IDEAL©: eficiente (niveles - más abajo)\n\nRespuesta IDEAL©: basada en acciones (p. ej., repetición)\n\nRespuesta IDEAL©: enfocada al comportamiento, no al niño\n\nNiveles de Respuesta™: Interacción divertida\n\nNiveles de Respuesta™: Interacción estructurada\n\nNiveles de Respuesta™: Interacción para calmar"
+    ],
+    "response":"Entiendo que quieras claridad sobre los niveles de respuesta; es importante contar con una guía estructurada para manejar los desafíos.\n\nQué puedes intentar:\n• Aplica la Interacción divertida para conectar y motivar al niño antes de corregir [Fuente 1].\n• Usa la Interacción estructurada para ofrecer límites claros y consistentes [Fuente 1].\n• Emplea la Interacción para calmar cuando el niño está muy alterado, bajando el tono y ofreciendo un espacio seguro [Fuente 1].\n\nLo que la guía no cubre: La guía citada menciona tres niveles de respuesta, pero no describe el cuarto nivel que suele incluirse en el modelo completo de TBRI; para obtener la información completa, consulta el material oficial de TBRI o a un profesional especializado.",
+    "reference":"Nivel 1: Interacción divertida, Nivel 2: Interacción estructurada, Nivel 3: Interacción para calmar, y Nivel 4: Interacción para proteger.",
+    "faithfulness":0.125,
+    "answer_relevancy":0.7143892675,
+    "context_precision":0.0,
+    "context_recall":0.0
+  },
+  {
+    "user_input":"¿Qué funciones cumplen los sentidos según el documento de Principios de Empoderamiento de TBRI?",
+    "retrieved_contexts":[
+      "Estrategias fisiológicas: entendiendo el procesamiento sensorial\n\nCuando la experiencia se repite con el tiempo, estos estímulos sensoriales les suministran a los bebés un conocimiento valioso sobre el mundo que los rodea.\n\nFunciones de los estímulos sensoriales\n\nLos sentidos cumplen cuatro funciones principales:\n\n• Alertar al cuerpo y al cerebro sobre pistas importantes\n\n• Proteger al cuerpo y al cerebro para que no se abrumen\n\n• Seleccionar qué es importante y se le debe prestar atención\n\n• Organizar el cerebro y el comportamiento"
+    ],
+    "response":"Entiendo tu curiosidad por cómo los sentidos influyen en el desarrollo del niño; es importante conocer esos fundamentos.\n\nQué puedes intentar:\n• Recuerda que, según la guía, los sentidos cumplen cuatro funciones clave: alertar al cuerpo y al cerebro sobre información importante, protegerlos para evitar sobrecarga, seleccionar lo que es relevante para prestar atención y organizar el cerebro y el comportamiento [Fuente 1].",
+    "reference":"Cumplen cuatro funciones principales: alertar al cuerpo y al cerebro sobre pistas importantes, proteger al cuerpo y al cerebro para no abrumarse, seleccionar qué es importante prestar atención, y organizar el cerebro y el comportamiento.",
+    "faithfulness":null,
+    "answer_relevancy":0.7610980742,
+    "context_precision":0.9999999999,
+    "context_recall":1.0
+  }
+]
