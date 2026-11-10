@@ -205,9 +205,13 @@ class AgenteCrianza:
                 continue
 
             contenido = mensaje_modelo.content or ""
-            if not registro_tools:
-                # No se llamó ninguna tool este turno (saludo/charla casual):
-                # se acepta como texto plano, sin exigir el contrato JSON.
+            if not registro_tools and not contenido.lstrip().startswith("{"):
+                # No se llamó ninguna tool y la respuesta no parece el JSON
+                # del contrato (saludo/charla casual): se acepta como texto
+                # plano, sin exigir el contrato. Si sí parece JSON (p. ej. el
+                # modelo arma una abstención estructurada sin llamar tools,
+                # como ante una instrucción maliciosa), igual se intenta
+                # formatear abajo en vez de mostrar el JSON crudo.
                 resultado_final = contenido.strip() or None
                 break
             try:
@@ -215,6 +219,12 @@ class AgenteCrianza:
                 break
             except (ValueError, KeyError, TypeError) as error:
                 LOGGER.warning("Respuesta final fuera del contrato: %s", error)
+                if not registro_tools:
+                    # Sin tools de por medio no hay nada que corregir con
+                    # otra llamada (no hay evidencia ni citas que pedir):
+                    # se muestra el texto tal cual en vez de reintentar.
+                    resultado_final = contenido.strip() or None
+                    break
                 mensajes.append({"role": "assistant", "content": contenido})
                 mensajes.append(
                     {

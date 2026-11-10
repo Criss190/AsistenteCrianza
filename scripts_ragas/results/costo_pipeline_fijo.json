@@ -1,0 +1,97 @@
+{
+  "rows": [
+    {
+      "question": "¿Cuáles son las tres reglas para las relaciones utilizadas en el grupo de cuidado según TBRI?",
+      "llm_calls": 1,
+      "tokens": 2730,
+      "latencia_ms": 7380.596248999609
+    },
+    {
+      "question": "¿Qué significan las siglas de la Respuesta IDEAL en los Principios de Corrección de TBRI?",
+      "llm_calls": 1,
+      "tokens": 2838,
+      "latencia_ms": 1354.050312000254
+    },
+    {
+      "question": "¿Cuáles son los cuatro Niveles de Respuesta de TBRI frente a un comportamiento desafiante?",
+      "llm_calls": 1,
+      "tokens": 2735,
+      "latencia_ms": 1877.2488479999083
+    },
+    {
+      "question": "¿Qué funciones cumplen los sentidos según el documento de Principios de Empoderamiento de TBRI?",
+      "llm_calls": 1,
+      "tokens": 2379,
+      "latencia_ms": 1169.3646240000817
+    },
+    {
+      "question": "¿Qué son los sentidos internos descritos en TBRI y en qué consisten?",
+      "llm_calls": 1,
+      "tokens": 2171,
+      "latencia_ms": 962.7940000000308
+    },
+    {
+      "question": "¿Por qué es tan importante la hidratación y el control de la glucemia cada dos horas en niños con antecedentes difíciles?",
+      "llm_calls": 1,
+      "tokens": 2853,
+      "latencia_ms": 1641.6892440001902
+    },
+    {
+      "question": "¿Qué conductas presentan los bebés con un estilo de apego evitativo según Bowlby/TBRI?",
+      "llm_calls": 1,
+      "tokens": 2862,
+      "latencia_ms": 1322.8051300002335
+    },
+    {
+      "question": "¿Cuáles son las tres estrategias para relacionarse que se trabajan en los Principios de Conexión de TBRI?",
+      "llm_calls": 1,
+      "tokens": 2929,
+      "latencia_ms": 1685.3410040002927
+    },
+    {
+      "question": "Según el artículo de Gómez Muzzio et al. (2008), ¿qué es la sensibilidad parental según Ainsworth?",
+      "llm_calls": 1,
+      "tokens": 2152,
+      "latencia_ms": 2512.3276889999033
+    },
+    {
+      "question": "¿Qué tres modalidades de psicoterapia basadas en evidencia se revisan en el artículo de Gómez Muzzio (2008)?",
+      "llm_calls": 2,
+      "tokens": 5645,
+      "latencia_ms": 2491.3669030001984
+    },
+    {
+      "question": "Según la revisión sistemática de Lin-Lewry et al. (2024), ¿qué efectos tienen las intervenciones digitales en los padres durante el primer año postparto?",
+      "llm_calls": 1,
+      "tokens": 3016,
+      "latencia_ms": 1642.907651999849
+    },
+    {
+      "question": "¿Qué moderadores o factores clave incrementaron la efectividad de las intervenciones digitales según Lin-Lewry et al. (2024)?",
+      "llm_calls": 2,
+      "tokens": 4864,
+      "latencia_ms": 2474.488893000853
+    },
+    {
+      "question": "¿Cuál es la velocidad recomendada para la órbita de los satélites de baja altura alrededor de Marte?",
+      "llm_calls": 0,
+      "tokens": 0,
+      "latencia_ms": 109.38165399966238
+    },
+    {
+      "question": "¿Cuáles son las tasas actuales del impuesto a la renta para empresas en Colombia?",
+      "llm_calls": 0,
+      "tokens": 0,
+      "latencia_ms": 83.54763399984222
+    },
+    {
+      "question": "¿En qué año se firmó el tratado de paz de la Primera Guerra Mundial en Versalles?",
+      "llm_calls": 0,
+      "tokens": 0,
+      "latencia_ms": 81.4765900004204
+    }
+  ],
+  "avg_llm_calls": 0.9333333333333333,
+  "avg_tokens": 2478.266666666667,
+  "avg_latency_ms": 1785.9590950667553
+}

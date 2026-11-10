@@ -1,0 +1,385 @@
+{
+  "evaluation": {
+    "in_domain_count": 12,
+    "out_of_domain_count": 3,
+    "correct_abstentions": 3,
+    "out_of_domain_abstention_rate": 1.0
+  },
+  "metrics": {
+    "faithfulness": null,
+    "answer_relevancy": null,
+    "context_precision": null,
+    "context_recall": null
+  },
+  "cost": {
+    "avg_llm_calls": 2.533333333333333,
+    "avg_tokens": 6541.933333333333,
+    "avg_latency_ms": 4569.308672400075
+  },
+  "results": [
+    {
+      "question": "¿Cuáles son las tres reglas para las relaciones utilizadas en el grupo de cuidado según TBRI?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entiendo que buscas claridad sobre las reglas del grupo de cuidado.\n\nQué puedes intentar:\n• Mi especialidad es la crianza responsable y no encontré información suficiente en la guía ni en fuentes públicas confiables para responder esto con seguridad.",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "tres reglas relaciones grupo de cuidado TBRI"
+          }
+        }
+      ],
+      "llm_calls": 2,
+      "tokens": 5241,
+      "latencia_ms": 1857.466387000386,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Qué significan las siglas de la Respuesta IDEAL en los Principios de Corrección de TBRI?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entiendo que quieras claridad sobre esa herramienta para manejar conductas.\n\nQué puedes intentar:\n• I – Inmediata (Respuesta IDEAL©: inmediata) (Fuente: TBRI — Principios de Corrección (libro de trabajo del participante), p.28).\n• D – Directa (Respuesta IDEAL©: directa) (Fuente: TBRI — Principios de Corrección (libro de trabajo del participante), p.28).\n• E – Eficiente (Respuesta IDEAL©: eficiente) (Fuente: TBRI — Principios de Corrección (libro de trabajo del participante), p.28).\n• A – Basada en acciones y enfocada al comportamiento, no al niño (Respuesta IDEAL©: basada en acciones; enfocada al comportamiento, no al niño) (Fuente: TBRI — Principios de Corrección (libro de trabajo del participante), p.28).",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "Respuesta IDEAL siglas"
+          }
+        }
+      ],
+      "llm_calls": 3,
+      "tokens": 7824,
+      "latencia_ms": 4682.836799999677,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Cuáles son los cuatro Niveles de Respuesta de TBRI frente a un comportamiento desafiante?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entiendo que quieras claridad para responder de forma coherente a los desafíos de tu hijo.\n\nQué puedes intentar:\n• Interacción divertida (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.21).\n• Interacción estructurada (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.21).\n• Interacción para calmar (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.21).\n• Interacción para proteger (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.21).",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "cuatro niveles de respuesta TBRI comportamiento desafiante"
+          }
+        }
+      ],
+      "llm_calls": 2,
+      "tokens": 5303,
+      "latencia_ms": 2044.9293080000643,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Qué funciones cumplen los sentidos según el documento de Principios de Empoderamiento de TBRI?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entiendo que quieras profundizar en cómo los sentidos apoyan el empoderamiento de tu hijo.\n\nQué puedes intentar:\n• Mi especialidad es la crianza responsable y no encontré información suficiente en la guía ni en fuentes públicas confiables para responder esto con seguridad.",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "funciones de los sentidos Principios de Empoderamiento TBRI"
+          }
+        }
+      ],
+      "llm_calls": 2,
+      "tokens": 4685,
+      "latencia_ms": 1376.4491809997708,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Qué son los sentidos internos descritos en TBRI y en qué consisten?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entender los sentidos internos es clave para apoyar el desarrollo sensorial de tu hijo.\n\nQué puedes intentar:\n• Los sentidos internos incluyen el vestibular, propioceptivo y táctil; el vestibular, regulado por el fluido del oído interno, informa al cuerpo sobre su posición respecto a la tierra y tiene conexiones en todo el cerebro (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.10).\n• El sentido propioceptivo brinda información sobre la posición y movimiento de las partes del cuerpo, ayudando a organizar la postura y la coordinación (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.10).\n• El sentido táctil interno se refiere a la percepción interna del cuerpo, como la presión y el movimiento interno, y colabora con los otros sentidos para que el cerebro interprete el entorno (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.10).",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "sentidos internos TBRI"
+          }
+        }
+      ],
+      "llm_calls": 2,
+      "tokens": 4797,
+      "latencia_ms": 1809.6218580003551,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Por qué es tan importante la hidratación y el control de la glucemia cada dos horas en niños con antecedentes difíciles?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entiendo tu preocupación; cuidar la hidratación y la glucemia es fundamental, sobre todo en niños que han vivido situaciones difíciles.\n\nLos niños con antecedentes difíciles pueden presentar alteraciones en la regulación de la glucosa y mayor vulnerabilidad a la deshidratación, lo que impacta su comportamiento y capacidad cognitiva (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.15).\n\nQué puedes intentar:\n• Mantén botellas de agua accesibles y fomenta que el niño beba regularmente, usando recordatorios visuales como una gráfica de \"semáforo\" (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.15).\n• Establece meriendas programadas cada dos horas, permitiendo que el niño elija alimentos saludables de un tazón disponible en su habitación o en la cocina (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.16).\n• Monitorea signos de hambre o baja glucemia y, si es necesario, consulta con un profesional de salud para ajustar la alimentación y evitar fluctuaciones que puedan desencadenar conductas difíciles (Fuente: TBRI — Principios de Empoderamiento (libro de trabajo del participante), p.15).",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "hidratación control glucemia cada dos horas niños antecedentes difíciles"
+          }
+        }
+      ],
+      "llm_calls": 2,
+      "tokens": 5447,
+      "latencia_ms": 3663.8737450002736,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Qué conductas presentan los bebés con un estilo de apego evitativo según Bowlby/TBRI?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entiendo que observar estos patrones puede generar preocupación.\n\nQué puedes intentar:\n• Los bebés con apego evitativo tienden a no buscar consuelo cuando el cuidador se aleja y pueden mostrarse distantes o poco expresivos, evitando el contacto cercano (Fuente: TBRI — Principios de Conexión (libro de trabajo del participante), p.10, sección Apego infantil).\n• Pueden parecer más deseables en observaciones externas, pero en realidad reflejan una estrategia de autocuidado frente a la falta de respuesta consistente del cuidador (Fuente: TBRI — Principios de Conexión (libro de trabajo del participante), p.9, sección Apego infantil).",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "apego evitativo conductas bebés"
+          }
+        },
+        {
+          "tool": "buscar_en_web",
+          "argumentos": {
+            "consulta": "conductas bebés apego evitativo",
+            "se_uso_base": true
+          }
+        }
+      ],
+      "llm_calls": 4,
+      "tokens": 11510,
+      "latencia_ms": 21794.820901000094,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Cuáles son las tres estrategias para relacionarse que se trabajan en los Principios de Conexión de TBRI?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entiendo que quieras conocer las herramientas clave para fortalecer la relación con tu hijo.\n\nQué puedes intentar:\n• Emparejamiento conductual: sentarse de la misma manera que el niño y escoger objetos (como el mismo color de juguete) que le gusten (Fuente: TBRI — Principios de Conexión (libro de trabajo del participante), p.17).\n• Interacción divertida: jugar sin miedo a ser tonto, usar juegos imaginativos que desarman el miedo (Fuente: TBRI — Principios de Conexión (libro de trabajo del participante), p.17).\n• Estrategias de conciencia plena: crear un ambiente afectuoso que le haga sentir seguridad y confianza al niño (Fuente: TBRI — Principios de Conexión (libro de trabajo del participante), p.14).",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "Principios de Conexión tres estrategias para relacionarse"
+          }
+        }
+      ],
+      "llm_calls": 2,
+      "tokens": 5486,
+      "latencia_ms": 2878.074449000451,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "Según el artículo de Gómez Muzzio et al. (2008), ¿qué es la sensibilidad parental según Ainsworth?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entiendo que quieras precisar esa definición para apoyar tu práctica parental.\n\nQué puedes intentar:\n• Según Ainsworth, la sensibilidad parental es la capacidad del cuidador para percibir, interpretar correctamente y responder de forma oportuna y adecuada a las señales y necesidades del niño (Fuente: Gómez Muzzio, Muñoz y Santelices (2008) — Efectividad de las intervenciones en apego con infancia vulnerada, p.5).",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "sensibilidad parental Ainsworth definición"
+          }
+        }
+      ],
+      "llm_calls": 2,
+      "tokens": 4735,
+      "latencia_ms": 1597.128487000191,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Qué tres modalidades de psicoterapia basadas en evidencia se revisan en el artículo de Gómez Muzzio (2008)?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Comprendo que quieras saber qué terapias basadas en evidencia se revisan en ese artículo.\n\nQué puedes intentar:\n• Las tres modalidades de psicoterapia basadas en evidencia revisadas son: 1) Psicoterapia Infante‑Cuidador; 2) Terapia para padres cuya parentalidad se ve interferida por los antiguos “fantasmas”; 3) una tercera modalidad que el artículo menciona pero no especifica en los fragmentos disponibles (Fuente: Gómez Muzzio, Muñoz y Santelices (2008) — Efectividad de las intervenciones en apego con infancia vulnerada, p.1).\n\nLo que la guía no cubre: El documento no detalla cuál es la tercera modalidad de terapia mencionada.",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "Gómez Muzzio 2008 modalidades de psicoterapia basadas en evidencia"
+          }
+        },
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "modalidades de psicoterapia basadas en evidencia Gómez Muzzio 2008 terapia infante-cuidador"
+          }
+        }
+      ],
+      "llm_calls": 4,
+      "tokens": 11904,
+      "latencia_ms": 3881.4713550000306,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "Según la revisión sistemática de Lin-Lewry et al. (2024), ¿qué efectos tienen las intervenciones digitales en los padres durante el primer año postparto?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entiendo que buscas información clara sobre los efectos de esas intervenciones.\n\nQué puedes intentar:\n• Los programas digitales aumentan la auto‑eficacia parental y el apoyo social, y reducen los síntomas depresivos entre 6 semanas y 3 meses posparto (Fuente: Lin-Lewry et al. (2024) — Revisión sistemática de intervenciones digitales de crianza, p.6).\n• Los efectos son significativos en el periodo temprano (hasta 3 meses) pero no se observan a los 6‑9 meses posparto (Fuente: Lin-Lewry et al. (2024) — Revisión sistemática de intervenciones digitales de crianza, p.6).",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "Lin-Lewry 2024 intervenciones digitales padres primer año postparto"
+          }
+        }
+      ],
+      "llm_calls": 2,
+      "tokens": 5206,
+      "latencia_ms": 1744.6723129996826,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Qué moderadores o factores clave incrementaron la efectividad de las intervenciones digitales según Lin-Lewry et al. (2024)?",
+      "domain": "in_domain",
+      "mode": "agent",
+      "answer": "Entiendo que buscas comprender qué elementos potencian los resultados de las intervenciones digitales.\n\nQué puedes intentar:\n• Los estudios mostraron que intervenciones digitales de al menos 6 semanas aumentan significativamente la autoeficacia parental y el apoyo social (Fuente: Lin-Lewry et al. (2024) — Revisión sistemática de intervenciones digitales de crianza, p.5).",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "Lin-Lewry 2024 intervenciones digitales moderadores factores clave"
+          }
+        }
+      ],
+      "llm_calls": 2,
+      "tokens": 4677,
+      "latencia_ms": 2078.3615939999436,
+      "correct_abstention": null,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Cuál es la velocidad recomendada para la órbita de los satélites de baja altura alrededor de Marte?",
+      "domain": "out_of_domain",
+      "mode": "agent",
+      "answer": "Entiendo que buscas información técnica.\n\nQué puedes intentar:\n• Mi especialidad es la crianza responsable y no encontré información suficiente en la guía ni en fuentes públicas confiables para responder esto con seguridad.",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "velocidad órbita satélites Marte"
+          }
+        },
+        {
+          "tool": "buscar_en_web",
+          "argumentos": {
+            "consulta": "orbital speed low altitude satellites Mars",
+            "se_uso_base": true
+          }
+        }
+      ],
+      "llm_calls": 3,
+      "tokens": 7117,
+      "latencia_ms": 7138.590038000075,
+      "correct_abstention": true,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿Cuáles son las tasas actuales del impuesto a la renta para empresas en Colombia?",
+      "domain": "out_of_domain",
+      "mode": "agent",
+      "answer": "Entiendo que buscas información precisa sobre impuestos.\n\nQué puedes intentar:\n• Mi especialidad es la crianza responsable y no encontré información suficiente en la guía ni en fuentes públicas confiables para responder esto con seguridad.",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "impuesto a la renta empresas Colombia"
+          }
+        },
+        {
+          "tool": "buscar_en_web",
+          "argumentos": {
+            "consulta": "tasa impuesto a la renta empresas Colombia 2024",
+            "se_uso_base": true
+          }
+        }
+      ],
+      "llm_calls": 3,
+      "tokens": 7047,
+      "latencia_ms": 6663.600429000326,
+      "correct_abstention": true,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    },
+    {
+      "question": "¿En qué año se firmó el tratado de paz de la Primera Guerra Mundial en Versalles?",
+      "domain": "out_of_domain",
+      "mode": "agent",
+      "answer": "Entiendo tu curiosidad por la historia.\n\nQué puedes intentar:\n• Mi especialidad es la crianza responsable y no encontré información suficiente en la guía ni en fuentes públicas confiables para responder esto con seguridad.",
+      "tool_calls": [
+        {
+          "tool": "buscar_en_base",
+          "argumentos": {
+            "consulta": "tratado de paz Primera Guerra Mundial Versalles año"
+          }
+        },
+        {
+          "tool": "buscar_en_web",
+          "argumentos": {
+            "consulta": "tratado de paz de Versalles año firma",
+            "se_uso_base": true
+          }
+        }
+      ],
+      "llm_calls": 3,
+      "tokens": 7150,
+      "latencia_ms": 5327.733240999805,
+      "correct_abstention": true,
+      "faithfulness": null,
+      "answer_relevancy": null,
+      "context_precision": null,
+      "context_recall": null
+    }
+  ]
+}
