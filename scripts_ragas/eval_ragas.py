@@ -128,7 +128,9 @@ def recolectar_evidencia(
             # El plan gratuito de Groq limita tokens por minuto; espaciar las
             # llamadas evita que la generación caiga al modo local por 429.
             time.sleep(espera)
+        inicio = time.perf_counter()
         resultado = chat.responder(fila["question"])
+        latencia_ms = (time.perf_counter() - inicio) * 1000
         evaluacion.append(
             {
                 "question": fila["question"],
@@ -137,6 +139,9 @@ def recolectar_evidencia(
                 "ground_truth": fila["ground_truth"],
                 "domain": _clasificar_dominio(fila),
                 "mode": resultado["mode"],
+                "llm_calls": resultado.get("llm_calls", 0),
+                "tokens": resultado.get("tokens", 0),
+                "latencia_ms": latencia_ms,
             }
         )
     return evaluacion
@@ -257,10 +262,17 @@ def main() -> None:
     for metrica in METRIC_NAMES:
         if metrica not in tabla:
             tabla[metrica] = float("nan")
-    print(tabla[["question", "domain", *METRIC_NAMES]].to_string(index=False))
+    print(
+        tabla[["question", "domain", "llm_calls", "tokens", "latencia_ms", *METRIC_NAMES]].to_string(
+            index=False
+        )
+    )
     resumen = tabla[list(METRIC_NAMES)].mean(numeric_only=True)
     print("\nPromedio de métricas Ragas:")
     print(resumen.to_frame("score").to_string())
+    costo = tabla[["llm_calls", "tokens", "latencia_ms"]].mean(numeric_only=True)
+    print("\nCosto promedio por pregunta (pipeline fijo):")
+    print(costo.to_frame("promedio").to_string())
     abstenciones_correctas = sum(
         registro["mode"] == "no_evidence" for registro in registros_fuera_dominio
     )
@@ -281,6 +293,9 @@ def main() -> None:
             "question": fila["question"],
             "domain": fila["domain"],
             "mode": fila["mode"],
+            "llm_calls": fila["llm_calls"],
+            "tokens": fila["tokens"],
+            "latencia_ms": fila["latencia_ms"],
             "correct_abstention": (
                 fila["mode"] == "no_evidence"
                 if fila["domain"] == "out_of_domain"
@@ -312,6 +327,11 @@ def main() -> None:
                     "out_of_domain_count": len(registros_fuera_dominio),
                     "correct_abstentions": abstenciones_correctas,
                     "out_of_domain_abstention_rate": tasa_abstencion,
+                },
+                "cost": {
+                    "avg_llm_calls": float(costo["llm_calls"]),
+                    "avg_tokens": float(costo["tokens"]),
+                    "avg_latency_ms": float(costo["latencia_ms"]),
                 },
                 "metrics": {
                     metrica: (

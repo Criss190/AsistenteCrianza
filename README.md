@@ -1,11 +1,64 @@
 # CrianzApp — Crianza con calma
 
-Asistente web de orientación general sobre crianza positiva. El sistema
-recupera fragmentos de documentos locales, presenta las fuentes y, si se
-configura `GROQ_API_KEY`, usa Groq para redactar una respuesta conversacional
-restringida a esa evidencia.
+Asistente web de orientación general sobre crianza positiva. La interfaz
+desplegada usa un **agente con tool calling** (Avance 3,
+[docs/agente_avance3.md](docs/agente_avance3.md)): el LLM decide si busca en
+la guía local, si genera una referencia APA o si busca en un conjunto fijo
+de sitios web oficiales, y responde solo con lo que esas tools devolvieron,
+citando la fuente. El pipeline fijo original (Avance 2,
+[docs/flujo_completo_rag.md](docs/flujo_completo_rag.md)) se conserva en
+`src/rag_chat.py` para comparación en la evaluación Ragas.
 
-## Flujo RAG implementado
+## Agente con tool calling (Avance 3)
+
+`src/agent.py` (`AgenteCrianza`) reemplaza la recuperación automática del
+Avance 2 por un loop de hasta 4 idas y vueltas con Groq (SDK nativo,
+tool calling estilo OpenAI). Tools en [src/tools.py](src/tools.py):
+
+- **`buscar_en_base(consulta)`** — recupera en la guía local (lo mismo que
+  usaba el Avance 2). Máximo 4 fragmentos de 600 caracteres, cada uno con
+  documento y página/sección, fijo en código.
+- **`generar_referencia_apa(documento)`** — tarea de dominio: devuelve la
+  cita APA real y fija de uno de los 5 documentos del corpus (nunca inventa
+  una referencia).
+- **`buscar_en_web(consulta, se_uso_base)`** — búsqueda pública vía Tavily,
+  ver política abajo.
+
+### Búsqueda web controlada
+
+La base de conocimiento nunca sale del sistema — solo la *consulta* que el
+agente decide enviar a Tavily, y solo bajo esta política:
+
+- **Cuándo se usa**: solo si `buscar_en_base` no encontró evidencia para la
+  misma pregunta Y la pregunta trata de información pública o vigente (una
+  norma, una definición general, una cifra reciente) — nunca como primera
+  opción. La regla está en el docstring de `buscar_en_web` y en el System
+  Prompt, y además se refuerza en código: la tool recibe `se_uso_base` y si
+  es `False` rechaza la búsqueda sin llegar a llamar a Tavily.
+- **Sitios permitidos** (fijos en `DOMINIOS_PERMITIDOS_WEB`, el LLM no los
+  puede cambiar): `child.tcu.edu` (Instituto Karyn Purvis, fuente oficial de
+  TBRI®), `icbf.gov.co` (protección infantil en Colombia), `who.int`,
+  `unicef.org`, `healthychildren.org` (Academia Americana de Pediatría) y
+  `cdc.gov`. Se eligieron por ser organismos oficiales o de salud pública
+  reconocidos en crianza y protección infantil, no sitios genéricos.
+- **Resultados acotados**: máximo 3, cada uno con título, URL y un extracto
+  de hasta 300 caracteres, marcado `origen: "web"`.
+- **Respuesta separada por origen**: lo que viene de la guía se cita como
+  `(Fuente: documento, p.página)`; lo que viene de la web, como
+  `[web: URL]`. Nunca se mezclan en una misma cita.
+
+Requiere `TAVILY_API_KEY` (ver [Despliegue](#despliegue)); sin ella,
+`buscar_en_web` devuelve un error controlado y el agente sigue funcionando
+solo con la base local.
+
+### Registro de uso de tools
+
+Cada respuesta del agente guarda qué tools llamó, con qué argumentos, y
+cuántas llamadas al LLM hizo, en `scripts_ragas/results/agent_log.jsonl` y
+en la propia respuesta de la API (`tool_calls`, `llm_calls`) — la interfaz
+los muestra en una sección desplegable.
+
+## Pipeline fijo (Avance 2) — flujo RAG de referencia
 
 ```mermaid
 flowchart LR
@@ -101,11 +154,11 @@ extractivo. Abre `http://localhost:5000`.
   devuelve secretos.
 - `POST /chat` y alias `POST /api/chat`: JSON `{ "message": "...", "history": [...] }`.
   `history` son los últimos turnos `{role, content}` de la conversación (el
-  frontend conserva hasta 4 intercambios); el backend los usa para resolver
-  seguimientos elípticos y dar contexto a la generación, nunca como fuente de
-  hechos ni para decidir riesgo de seguridad. Devuelve `respuesta`, `fuentes`,
-  `mode` y `notice`, además de alias en inglés.
-- Las fuentes tienen archivo, extracto, `chunk_id` y página/sección disponible.
+  frontend conserva hasta 4 intercambios); el agente los usa para resolver
+  seguimientos elípticos y dar contexto, nunca como fuente de hechos ni para
+  decidir riesgo de seguridad. Devuelve `respuesta`, `fuentes` (con `origen:
+  "base"|"web"`), `mode`, `notice`, `tool_calls` (qué tool llamó y con qué
+  argumentos) y `llm_calls`, además de alias en inglés.
 
 ## Evaluación Ragas
 
@@ -150,8 +203,10 @@ detectar cambios en el corpus o en estos parámetros.
 ## Despliegue
 
 El blueprint de Render está en `render.yaml`. Conecta el repositorio como
-Blueprint y configura `GROQ_API_KEY` como secreto; `GROQ_MODEL` tiene un valor
-predeterminado. El comando de inicio es Gunicorn con un worker y crea el
+Blueprint y configura `GROQ_API_KEY` y `TAVILY_API_KEY` como secretos;
+`GROQ_MODEL` tiene un valor predeterminado. Sin `TAVILY_API_KEY` el agente
+sigue funcionando, solo que `buscar_en_web` devuelve un error controlado en
+vez de resultados. El comando de inicio es Gunicorn con un worker y crea el
 índice al arrancar. El almacenamiento del plan gratuito puede ser efímero,
 por lo que el índice se reconstruye en cada despliegue.
 
@@ -164,6 +219,8 @@ por lo que el índice se reconstruye en cada despliegue.
 
 El asistente brinda información general; no diagnostica ni reemplaza atención
 profesional. Señales de abuso, violencia o autolesión tienen una respuesta de
-seguridad prioritaria. En Colombia se informa la línea ICBF 141 y emergencias
-123. Al habilitar Groq, la pregunta actual y los fragmentos recuperados se
-envían a ese proveedor. No incluyas datos identificables de niños o niñas.
+seguridad prioritaria, determinística, antes de llegar al agente. En
+Colombia se informa la línea ICBF 141 y emergencias 123. Al habilitar Groq,
+la pregunta actual y los fragmentos recuperados se envían a ese proveedor; si
+el agente usa `buscar_en_web`, la consulta (no la base de conocimiento) se
+envía a Tavily. No incluyas datos identificables de niños o niñas.

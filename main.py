@@ -6,14 +6,19 @@ from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, render_template, request
 
-from src.rag_chat import ChatRAG
+from src.agent import AgenteCrianza
 
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
-chat_rag = ChatRAG()
+# El chat desplegado usa el agente (Avance 3): el LLM decide qué tool llamar.
+# El pipeline fijo de Avance 2 (`src/rag_chat.ChatRAG`) se conserva en el
+# código y se instancia aparte solo para comparación en
+# scripts_ragas/eval_ragas.py; cargarlo aquí también duplicaría el índice en
+# memoria sin servir ninguna ruta.
+agente = AgenteCrianza()
 
 
 @app.get("/")
@@ -25,7 +30,7 @@ def inicio() -> str:
 @app.get("/api/health")
 def health() -> Response:
     """Estado mínimo para comprobaciones de disponibilidad de Render."""
-    return jsonify(chat_rag.estado())
+    return jsonify(agente.estado())
 
 
 @app.post("/chat")
@@ -57,9 +62,9 @@ def chat() -> Response | tuple[Response, int]:
         return jsonify(error="El historial debe contener turnos válidos."), 400
 
     try:
-        resultado = chat_rag.responder(mensaje.strip(), historial=historial)
+        resultado = agente.responder(mensaje.strip(), historial=historial)
     except Exception:
-        app.logger.exception("Error procesando la consulta RAG")
+        app.logger.exception("Error procesando la consulta del agente")
         return jsonify(
             error="Ocurrió un problema al procesar tu consulta. Inténtalo de nuevo."
         ), 500
@@ -71,6 +76,8 @@ def chat() -> Response | tuple[Response, int]:
         sources=resultado["sources"],
         mode=resultado["mode"],
         notice=resultado["notice"],
+        tool_calls=resultado["tool_calls"],
+        llm_calls=resultado["llm_calls"],
     )
 
 

@@ -70,10 +70,10 @@ function addAssistantMessage(result) {
   name.textContent = 'CrianzApp';
   const subtitle = document.createElement('span');
   const subtitles = {
-    groq: 'respuesta sintetizada con IA y basada en fuentes',
-    local: 'resumen local basado en fuentes',
+    agent: 'respuesta del agente, con las tools que decidió usar',
+    no_llm: 'el agente necesita un modelo con tool calling',
     safety: 'orientación prioritaria de seguridad',
-    no_evidence: 'sin evidencia suficiente en la guía',
+    no_evidence: 'sin evidencia suficiente en la guía ni en la web',
   };
   subtitle.textContent = subtitles[result.mode] || 'orientación basada en fuentes';
   meta.append(name, subtitle);
@@ -84,23 +84,69 @@ function addAssistantMessage(result) {
   answer.textContent = result.answer || 'No pude generar una respuesta. Inténtalo de nuevo.';
   bubble.append(answer);
 
-  const sources = result.fuentes || result.sources || [];
-  if (Array.isArray(sources) && sources.length > 0) {
+  const toolCalls = result.tool_calls || [];
+  if (Array.isArray(toolCalls) && toolCalls.length > 0) {
     const details = document.createElement('details');
     details.className = 'sources';
     const summary = document.createElement('summary');
-    summary.textContent = `Fuentes consultadas (${sources.length})`;
+    summary.textContent = `Herramientas usadas (${toolCalls.length})`;
     details.append(summary);
-    sources.forEach((source, index) => {
+    toolCalls.forEach((llamada) => {
+      const item = document.createElement('div');
+      item.className = 'source-item';
+      const nombre = document.createElement('strong');
+      nombre.textContent = llamada.tool;
+      const argumentos = document.createElement('p');
+      argumentos.textContent = JSON.stringify(llamada.argumentos || {});
+      item.append(nombre, argumentos);
+      details.append(item);
+    });
+    bubble.append(details);
+  }
+
+  const sources = result.fuentes || result.sources || [];
+  const fuentesBase = sources.filter((s) => (s.origen || 'base') === 'base');
+  const fuentesWeb = sources.filter((s) => s.origen === 'web');
+  if (fuentesBase.length > 0) {
+    const details = document.createElement('details');
+    details.className = 'sources';
+    const summary = document.createElement('summary');
+    summary.textContent = `De la guía (${fuentesBase.length})`;
+    details.append(summary);
+    fuentesBase.forEach((source) => {
       const item = document.createElement('div');
       item.className = 'source-item';
       const sourceName = document.createElement('strong');
-      const location = source.page ? ` · página ${source.page}` : '';
-      const section = source.section ? ` · ${source.section}` : '';
-      sourceName.textContent = `[Fuente ${index + 1}] ${source.title || source.name || source.source || 'Guía local'}${location}${section}`;
+      const ubicacion = source.pagina
+        ? ` · página ${source.pagina}`
+        : source.seccion
+          ? ` · ${source.seccion}`
+          : '';
+      sourceName.textContent = `${source.documento || source.title || source.source || 'Guía local'}${ubicacion}`;
       const excerpt = document.createElement('p');
-      excerpt.textContent = source.excerpt || source.fragment || '';
+      excerpt.textContent = source.texto || source.excerpt || '';
       item.append(sourceName, excerpt);
+      details.append(item);
+    });
+    bubble.append(details);
+  }
+  if (fuentesWeb.length > 0) {
+    const details = document.createElement('details');
+    details.className = 'sources';
+    const summary = document.createElement('summary');
+    summary.textContent = `De la web (${fuentesWeb.length})`;
+    details.append(summary);
+    fuentesWeb.forEach((source) => {
+      const item = document.createElement('div');
+      item.className = 'source-item';
+      const link = document.createElement('a');
+      link.href = source.url;
+      link.target = '_blank';
+      link.rel = 'noreferrer';
+      link.textContent = source.titulo || source.url;
+      const excerpt = document.createElement('p');
+      excerpt.textContent = source.extracto || '';
+      item.append(link, excerpt);
       details.append(item);
     });
     bubble.append(details);
@@ -116,10 +162,10 @@ function addAssistantMessage(result) {
   const mode = document.createElement('div');
   mode.className = `message-mode${result.mode === 'safety' ? ' mode-safety' : ''}`;
   const modeLabels = {
-    groq: 'Respuesta generada a partir de la guía recuperada',
-    local: 'Evidencia local · sin generación externa',
+    agent: 'Respuesta del agente a partir de las tools que usó',
+    no_llm: 'El agente necesita un modelo con tool calling configurado',
     safety: 'Orientación prioritaria de seguridad',
-    no_evidence: 'Sin evidencia suficiente en la guía',
+    no_evidence: 'Sin evidencia suficiente en la guía ni en la web',
   };
   mode.textContent = modeLabels[result.mode] || 'Respuesta basada en conocimiento local';
   column.append(mode);

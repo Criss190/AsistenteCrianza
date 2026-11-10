@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import re
-import unicodedata
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -21,6 +20,7 @@ from src.knowledge_base import (
 )
 from src.output_formatter import limpiar_texto_modelo, validar_formato
 from src.prompt_builder import build_prompt
+from src.safety import clasificar_riesgo, mensaje_de_seguridad, normalizar
 
 
 BASE_CONOCIMIENTO_DIR = (
@@ -41,54 +41,6 @@ MENSAJE_SIN_EVIDENCIA = (
     "transiciones, rituales) y corrección respetuosa de la conducta. Si tu "
     "consulta es de crianza, intenta contarme la situación con otras palabras; "
     "para temas médicos, de salud mental o legales, consulta a un profesional."
-)
-MENSAJE_ALERTA = (
-    "Gracias por contarlo. La seguridad del niño o la niña es lo primero. "
-    "Cree en lo que te cuenta, escúchale con calma y evita confrontar a la "
-    "persona señalada o pedirle que repita la historia. Busca ayuda de "
-    "protección infantil de inmediato; en Colombia puedes llamar al ICBF, "
-    "línea 141. Si existe peligro inmediato, llama al 123."
-)
-MENSAJE_AUTOLESION = (
-    "Gracias por contarlo; lo que se siente importa y no tienes que "
-    "enfrentarlo a solas. Si hay peligro inmediato, llama al 123. En Colombia "
-    "también puedes hablar ahora con la Línea 106, gratuita, confidencial y "
-    "disponible las 24 horas, con profesionales de salud mental. Si se trata "
-    "de tu hijo o hija, quédate a su lado, escúchale sin juzgar, retira lo que "
-    "pueda usar para hacerse daño y busca atención de salud mental cuanto antes."
-)
-MENSAJE_RIESGO_ADULTO = (
-    "Gracias por decirlo con honestidad: frenar a tiempo es lo más protector "
-    "que puedes hacer. Asegúrate de que el niño o la niña esté en un lugar "
-    "seguro, aléjate unos minutos a otro espacio, respira despacio y toma "
-    "agua. Si puedes, pide a otro adulto que se quede con él o ella. En "
-    "Colombia, la Línea 106 (gratuita, confidencial, 24 horas) te acompaña en "
-    "ese momento; si hay peligro inmediato, llama al 123. La línea 141 del "
-    "ICBF orienta a las familias sobre protección y crianza."
-)
-PATRONES_ABUSO = re.compile(
-    r"\b(abuso(?: sexual)?|abusad\w*|violacion\w*|acoso sexual|"
-    r"explotacion sexual|tocamiento\w*|maltrato infantil|"
-    r"violencia (?:intrafamiliar|domestica|sexual|familiar|en casa))\b|"
-    r"\bfamiliar\w*.{0,60}\b(?:la|lo)\s+(?:toca|toco)\b"
-)
-PATRONES_AUTOLESION = re.compile(
-    r"\b(suicid\w*|autolesion\w*|hacerme dano|hacerse dano|quiere morir|"
-    r"quiero morir|no quiero vivir|quitarme la vida|quitarse la vida|"
-    r"matarme|matarse|cortarme las venas)\b"
-)
-PATRONES_RIESGO_ADULTO = re.compile(
-    r"\b(?:ganas de|voy a|temo|me da miedo|miedo de|siento que (?:le )?voy a|"
-    r"no puedo evitar|no me controlo|podria)\b.{0,50}"
-    r"\b(?:hacerle dano|lastimarl[oae]|golpearl[oae]|pegarle|matarl[oae])\b"
-)
-PATRONES_DANO_A_NINO = re.compile(
-    r"\b(?:mi hijo|mi hija|mi nino|mi nina|el nino|la nina|menor)\b"
-    r".{0,60}\b(?:fue golpead\w*|fue maltratad\w*|le pegaron|"
-    r"la golpearon|lo golpearon|la maltrataron|lo maltrataron)\b|"
-    r"\b(?:adulto|familiar|padrastro|madrastra|cuidador|maestro|docente)\w*"
-    r".{0,60}\b(?:golpeo|pego|maltrato|amenazo)\b"
-    r".{0,40}\b(?:mi hijo|mi hija|mi nino|mi nina|menor)\b"
 )
 EJERCICIO_DE_LIBRO = re.compile(
     r"^(?:piense|reflexione|mire|complete|llene|escriba|analice|anote|"
@@ -176,16 +128,15 @@ class ChatRAG:
             for turno in (historial or [])
             if isinstance(turno, dict) and isinstance(turno.get("content"), str)
         ][-MAX_TURNOS_HISTORIAL:]
+        # Contadores de costo de este turno (para comparar con el agente en
+        # scripts_ragas/eval_agent.py); se incrementan en _llamar_groq.
+        self._llamadas_llm_turno = 0
+        self._tokens_turno = 0
 
-        tipo_riesgo = self._clasificar_riesgo(mensaje)
+        tipo_riesgo = clasificar_riesgo(mensaje)
         if tipo_riesgo:
-            mensajes = {
-                "autolesion": MENSAJE_AUTOLESION,
-                "riesgo_adulto": MENSAJE_RIESGO_ADULTO,
-                "abuso": MENSAJE_ALERTA,
-            }
             return self._resultado(
-                mensajes[tipo_riesgo],
+                mensaje_de_seguridad(tipo_riesgo),
                 [],
                 [],
                 "safety",
@@ -232,7 +183,15 @@ class ChatRAG:
         respuesta, fuentes, contextos = self._renumerar_citas(
             respuesta, fuentes, contextos
         )
-        return self._resultado(respuesta, fuentes, contextos, "groq", None)
+        return self._resultado(
+            respuesta,
+            fuentes,
+            contextos,
+            "groq",
+            None,
+            llamadas_llm=self._llamadas_llm_turno,
+            tokens=self._tokens_turno,
+        )
 
     # ------------------------------------------------------------------- Groq
     def _obtener_cliente(self) -> Any:
@@ -298,6 +257,10 @@ class ChatRAG:
         inicio = perf_counter()
         completion = self._obtener_cliente().chat.completions.create(**parametros)
         uso = completion.usage
+        self._llamadas_llm_turno = getattr(self, "_llamadas_llm_turno", 0) + 1
+        self._tokens_turno = getattr(self, "_tokens_turno", 0) + (
+            getattr(uso, "total_tokens", 0) or 0
+        )
         LOGGER.info(
             "Groq completado model=%s input_tokens=%s output_tokens=%s "
             "latency_ms=%.0f",
@@ -536,16 +499,6 @@ class ChatRAG:
         )
 
     @staticmethod
-    def _normalizar(texto: str) -> str:
-        normalizado = unicodedata.normalize("NFD", texto.lower())
-        sin_acentos = "".join(
-            caracter
-            for caracter in normalizado
-            if unicodedata.category(caracter) != "Mn"
-        )
-        return re.sub(r"\s+", " ", sin_acentos).strip()
-
-    @staticmethod
     def _extractos_locales(
         mensaje: str, fragmentos: list[FragmentoConocimiento], maximo: int = 3
     ) -> list[str]:
@@ -588,7 +541,7 @@ class ChatRAG:
         extractos: list[str] = []
         vistas: set[str] = set()
         for _, numero, _, frase in candidatos:
-            clave = ChatRAG._normalizar(frase)
+            clave = normalizar(frase)
             if clave in vistas:
                 continue
             vistas.add(clave)
@@ -607,6 +560,8 @@ class ChatRAG:
         contextos: list[str],
         modo: str,
         aviso: str | None,
+        llamadas_llm: int = 0,
+        tokens: int = 0,
     ) -> dict[str, Any]:
         """Incluye claves de compatibilidad y campos en español para la API."""
         return {
@@ -617,6 +572,8 @@ class ChatRAG:
             "contexts": contextos,
             "mode": modo,
             "notice": aviso,
+            "llm_calls": llamadas_llm,
+            "tokens": tokens,
         }
 
     @staticmethod
@@ -635,21 +592,3 @@ class ChatRAG:
             }
             for fragmento in fragmentos
         ]
-
-    @staticmethod
-    def _clasificar_riesgo(texto: str) -> str | None:
-        """Devuelve 'autolesion', 'riesgo_adulto', 'abuso' o None."""
-        normalizado = ChatRAG._normalizar(texto)
-        if PATRONES_AUTOLESION.search(normalizado):
-            return "autolesion"
-        if PATRONES_RIESGO_ADULTO.search(normalizado):
-            return "riesgo_adulto"
-        if PATRONES_ABUSO.search(normalizado) or PATRONES_DANO_A_NINO.search(
-            normalizado
-        ):
-            return "abuso"
-        return None
-
-    @staticmethod
-    def _es_situacion_de_riesgo(texto: str) -> bool:
-        return ChatRAG._clasificar_riesgo(texto) is not None
