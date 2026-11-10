@@ -96,7 +96,7 @@ class ChatRAG:
             LOGGER.warning(
                 "GROQ_API_KEY no está configurada: CrianzApp responderá solo con "
                 "extractos de la guía (sin redacción con IA). Define la variable "
-                "en .env o en el panel de Render para activar las respuestas."
+                "en .env o en el panel del servicio para activar las respuestas."
             )
 
     def estado(self) -> dict[str, Any]:

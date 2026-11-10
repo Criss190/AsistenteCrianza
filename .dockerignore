@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+.git
+.venv
+.venv*/
+__pycache__
+*.py[cod]
+.pytest_cache
+tests
+scripts_ragas
+vectorstore
