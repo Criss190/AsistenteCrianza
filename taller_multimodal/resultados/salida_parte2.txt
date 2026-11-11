@@ -1,0 +1,196 @@
+
+=== audio_1.mp3 | Mariana Gordillo | sin ruido ===
+Duración:      15.3 s
+Lo que se dijo: Hola. Mi hijo de cuatro años hace berrinches cada vez que le digo que no. Leí sobre TBRI, la Intervención Relacional Basada en la Confianza. ¿Qué es la Respuesta IDEAL y por qué dicen que debo responder en menos de tres segundos después del comportamiento?
+Transcripción:  Mi hijo de cuatro años hace berrinches cada vez que le digo que no. Leí sobre TVRI, la intervención relacional basada en la confianza. ¿Qué es la respuesta ideal y por qué dicen que debo responder en menos de tres segundos después del comportamiento?
+Error de palabras (WER): 4.4 %
+
+Respuesta del modelo:
+**Respuesta ideal según TBRI (Intervención Relacional Basada en la Confianza)**  
+
+1. **Reconoce el sentimiento**  
+   - “Entiendo que te sientas frustrado porque no puedes jugar con eso.”  
+2. **Muestra empatía**  
+   - “Es normal sentirse molesto cuando algo no sale como queremos.”  
+3. **Establece el límite de forma calmada**  
+   - “Pero no podemos hacerlo ahora. No es seguro.”  
+4. **Ofrece una alternativa**  
+   - “¿Te gustaría jugar con el coche de colores o dibujar algo?”  
+
+Esta secuencia se llama **Respuesta de Conexión**: valida el niño, le da seguridad y, al mismo tiempo, mantiene la regla que tú necesitas.
+
+---
+
+### ¿Por qué responder en menos de 3 segundos?
+
+- **El cerebro del niño procesa la amenaza en segundos**. Si no se le ofrece seguridad de inmediato, la emoción se intensifica y el berrinche se vuelve más difícil de controlar.  
+- **El “tiempo de respuesta” crea un espacio de calma** antes de que el niño se sumerja en la frustración.  
+- **Consistencia**: al responder siempre rápido, el niño aprende que su emoción será escuchada y que la regla (“no”) es firme pero justa.
+
+---
+
+### Pasos rápidos que puedes usar hoy
+
+1. **Detén el berrinche**: alza la voz solo un poco, mantén la calma.  
+2. **Aplica la secuencia de 4 pasos** (reconocer, empatizar, limitar, ofrecer alternativa).  
+3. **Repite la alternativa** si el niño sigue molesto: “Si quieres, podemos jugar con el coche ahora.”  
+4. **Cierra con un abrazo o un gesto de cercanía** cuando el berrinche se calme.  
+
+Con práctica, la respuesta se vuelve automática y el niño empieza a confiar en que sus emociones serán escuchadas y que las reglas son claras y justas. ¡Ánimo!
+
+=== audio_2.mp3 | Julian Cristancho | sin ruido ===
+Duración:      14.8 s
+Lo que se dijo: Tengo una duda sobre los Niveles de Respuesta de TBRI. ¿Cuál es la diferencia entre la interacción divertida, la interacción estructurada y la interacción para calmar? Mi hija de siete años me habla en tono exigente y voltea los ojos. ¿Qué nivel debo usar con ella?
+Transcripción:  Una duda sobre los niveles de respuesta de TVRI. ¿Cuál es la diferencia entre la interacción divertida, la interacción estructurada y la interacción para calmar? Mi hijo de 7 años me habla en tono exigente y voltea los ojos. ¿Qué nivel debe usar con ella?
+Error de palabras (WER): 10.9 %
+
+Respuesta del modelo:
+**Diferencias entre los niveles de respuesta de TBRI**
+
+| Nivel | Propósito | Cómo se ve en la práctica |
+|-------|-----------|---------------------------|
+| **Interacción divertida** | Fortalecer la relación y la confianza. | Juegos, risas, actividades espontáneas. Se usa cuando ambos están relajados y se busca reforzar el vínculo. |
+| **Interacción estructurada** | Enseñar, establecer límites y expectativas claras. | Conversaciones planificadas, reglas, tareas, actividades con un objetivo concreto. Se mantiene el tono positivo y respetuoso. |
+| **Interacción para calmar** | Desescalar la tensión y ayudar al niño a regular sus emociones. | Respiración profunda, espacio físico, lenguaje calmado, usar la voz baja y pausada. Se emplea cuando el niño está alterado o su comportamiento es problemático. |
+
+---
+
+### ¿Qué nivel usar con tu hijo de 7 años que habla en tono exigente y voltea los ojos?
+
+1. **Comienza con una **interacción estructurada**:  
+   - **Reconoce su emoción**: “Entiendo que te sientes frustrado porque quieres que haga esto ahora.”  
+   - **Establece una regla clara**: “Para que podamos seguir con la tarea, primero terminaremos de limpiar tu habitación.”  
+   - **Ofrece una elección**: “¿Prefieres terminar primero la tarea o limpiar primero? Tú eliges.”  
+   - **Reforzamiento positivo**: “Cuando completes la tarea, podrás jugar un rato.”  
+
+2. **Si la exigencia aumenta o el tono se vuelve más agresivo**:  
+   - Cambia a **interacción para calmar**:  
+     - **Pide un momento de pausa**: “Vamos a tomar un minuto para respirar juntos.”  
+     - **Usa la voz baja y pausada**: “Respira conmigo: inhala… exhala…”  
+     - **Repite la regla con calma**: “Recuerda que primero terminamos la tarea, luego puedes jugar.”  
+
+3. **Repite la estructura**:  
+   - Una vez que la tensión se haya reducido, vuelve a la interacción estructurada para cerrar la actividad y reforzar el aprendizaje.
+
+---
+
+#### Pasos concretos para hoy
+
+1. **Observa**: Antes de responder, mira a tu hijo y haz contacto visual.  
+2. **Reconoce**: “Veo que estás molesto porque quieres que haga esto ahora.”  
+3. **Establece la regla**: “Para que podamos seguir con la tarea, primero terminaremos de limpiar tu habitación.”  
+4. **Ofrece elección**: “¿Quieres limpiar primero o terminar la tarea primero?”  
+5. **Respira juntos** (si la tensión sube): “Respiremos profundo, inhalamos… exhalamos.”  
+6. **Reafirma**: “Cuando termines, podrás jugar un rato.”  
+
+Con estos pasos, mantienes la relación positiva, estableces límites claros y, si es necesario, calmas la situación sin recurrir a castigos físicos ni humillaciones. ¡Ánimo!
+
+=== audio_3.mp3 | Mariana Gordillo | sin ruido ===
+Duración:      15.2 s
+Lo que se dijo: ¿Qué diferencia hay entre autorregulación y corregulación? Mi hijo de seis años se desregula en las transiciones, por ejemplo cuando hay que apagar el televisor. ¿Cómo puedo usar las opciones, los acuerdos y el tiempo de inclusión en lugar del tiempo fuera?
+Transcripción:  ¿Qué diferencia hay entre autorregulación y corregulación? Mi hijo de 6 años se desregula en las transiciones, por ejemplo, cuando hay que apagar el televisor. ¿Cómo puedo usar las opciones, los acuerdos y el tiempo de inclusión en lugar del tiempo fuera?
+Error de palabras (WER): 2.4 %
+
+Respuesta del modelo:
+**Autorregulación vs. Corregulación**
+
+| Concepto | Qué es | Cómo se manifiesta |
+|----------|--------|--------------------|
+| **Autorregulación** | La capacidad del niño para controlar sus emociones, atención y comportamiento por sí mismo. | El niño se calma, cambia de actividad o sigue una rutina sin ayuda externa. |
+| **Corregulación** | El apoyo que tú, como cuidador, le das para que el niño regule sus emociones. | Tú ofreces opciones, estableces acuerdos y usas el “tiempo de inclusión” para que el niño se vuelva a conectar contigo y a la actividad. |
+
+---
+
+## 1. Preparar la transición
+
+1. **Anuncia con antelación**  
+   - “En dos minutos vamos a apagar el televisor y leer un cuento.”  
+   - Usa un temporizador visual (un reloj de arena de 2 minutos) para que el niño vea el tiempo que le queda.
+
+2. **Crea una rutina**  
+   - Cada vez que sea hora de apagar el televisor, sigue el mismo proceso: anuncio, opción, acuerdo, acción.
+
+---
+
+## 2. Ofrecer opciones (autorregulación)
+
+- **Pregunta**: “¿Quieres apagar el televisor tú mismo o prefieres que te ayude?”  
+- **Beneficio**: El niño siente control y reduce la frustración.
+
+---
+
+## 3. Establecer acuerdos (corregulación)
+
+- **Acuerdo simple**: “Cuando el televisor esté apagado, podemos leer un cuento de 10 minutos.”  
+- **Reafirma**: “Si lo apagas tú, te daré un sticker de la historia que te gusta.”  
+- **Consistencia**: Mantén el mismo acuerdo cada vez; la predictibilidad refuerza la autorregulación.
+
+---
+
+## 4. Usar el “tiempo de inclusión” (corregulación)
+
+1. **Cuando el niño se desregula**  
+   - En lugar de “tiempo fuera”, acércate a su nivel: si está en el suelo, siéntate con él.  
+   - Di: “Entiendo que te sientes frustrado. Vamos a calmarlo juntos.”
+
+2. **Re‑conexión**  
+   - Ofrece una actividad calmada: respirar juntos, tocar una pelota de estrés, o simplemente hablar de lo que le molesta.  
+   - Usa la misma voz y tono que antes de la transición.
+
+3. **Re‑enfoque**  
+   - Una vez calmado, recuerda el acuerdo: “Ahora que estamos tranquilos, apagamos el televisor y leemos.”  
+   - Refuerza el éxito con elogio: “¡Muy bien, lo apagaste tú!”.
+
+---
+
+## 5. Repetir y ajustar
+
+- **Observa**: ¿El niño se calma más rápido con las opciones y el tiempo de inclusión?  
+- **Ajusta**: Si necesita más tiempo de inclusión, aumenta el tiempo gradualmente.  
+- **Celebra**: Cada vez que la transición sea exitosa, celebra con un abrazo o un sticker.
+
+---
+
+### Resumen rápido
+
+1. **Anuncia** la transición con antelación.  
+2. **Ofrece opciones** para que el niño tome control.  
+3. **Establece acuerdos** claros y consistentes.  
+4. **Usa el tiempo de inclusión** para reconectar y calmar al niño cuando se desregula.  
+5. **Repite** y ajusta según sea necesario.
+
+Con estos pasos, tu hijo aprenderá a autorregularse y tú podrás corregularlo de forma positiva, sin recurrir al tiempo fuera. ¡Ánimo y mucho éxito!
+
+=== audio_4.mp3 | Julian Cristancho | con ruido ===
+Duración:      15.7 s
+Lo que se dijo: Mi sobrina de tres años se pone de mal humor todas las tardes. ¿Es cierto que la deshidratación y la glucemia baja afectan el comportamiento? ¿Qué estrategias fisiológicas de empoderamiento puedo aplicar y qué tiene que ver el procesamiento sensorial?
+Transcripción:  Mi sobrina de tres años se pone de mal humor todas las tardes. Es cierto que la deshidratación y la glucemia baja afectan el comportamiento, qué estrategias fisiobiológicas de empoderamiento puedo aplicar y qué tiene que ver el procesamiento sensorial.
+Error de palabras (WER): 2.5 %
+
+Respuesta del modelo:
+¡Hola!  
+Aquí tienes algunas ideas rápidas y prácticas que puedes probar hoy, inspiradas en la filosofía TBRI (Intervención Relacional Basada en la Confianza).
+
+| Paso | Qué hacer | Por qué funciona |
+|------|-----------|------------------|
+| **1. Hidratación** | Ofrece un vaso de agua o un jugo natural (sin azúcar añadida) cada 30‑45 min. Si le cuesta beber, prueba con una pajita o un sorbete. | El agua mantiene el equilibrio electrolítico y evita la irritabilidad por deshidratación. |
+| **2. Energía** | Después de la merienda, sugiere un snack pequeño y equilibrado: una rodaja de fruta con un puñado de frutos secos, un yogur natural o una tostada con mantequilla de maní. | Los carbohidratos complejos y las proteínas estabilizan la glucemia y le dan “fuel” para la tarde. |
+| **3. Rutina de “tiempo de calma”** | Establece un ritual de 5‑10 min antes de la merienda: sentarse juntos, respirar profundo, o leer un cuento corto. | La previsibilidad reduce la ansiedad y crea un espacio seguro para que se calme. |
+| **4. Sensibilidad sensorial** | Observa si hay sobre‑o sub‑estimulación: <br>• Si parece agitada, ofrece un “break” con una pelota de estrés, una manta ligera o un espacio tranquilo. <br>• Si parece aburrida, añade un objeto táctil (p. ej., una pelota de goma) o una actividad creativa. | El procesamiento sensorial afecta el estado emocional; un entorno equilibrado ayuda a regular la respuesta. |
+| **5. Refuerzo positivo** | Cuando se calme o participe, elogia con palabras concretas: “¡Qué bien te sentaste quieta!” o “¡Buen trabajo compartiendo tu agua!”. | El reconocimiento refuerza la conducta deseada y fortalece la relación de confianza. |
+| **6. Comunicación simple** | Pregunta: “¿Te sientes sed? ¿Te gustaría algo de comer?” | Involucrarla en la toma de decisiones aumenta su sentido de control y reduce la frustración. |
+
+### Tips rápidos
+- **Mantén la hidratación**: un pequeño vaso de agua antes de cada actividad.
+- **Snack equilibrado**: fruta + proteína (ej. yogur, queso).
+- **Rutina de 5 min**: respiración profunda o juego de “detener el tiempo”.
+- **Sensibilidad**: un espacio tranquilo con una manta o una pelota de goma.
+- **Elogio específico**: “¡Muy bien, te sentaste quieta!”.
+- **Pregunta abierta**: “¿Qué te gustaría beber ahora?”
+
+### Cuando buscar ayuda profesional
+Si la irritabilidad persiste, se acompaña de vómitos, fiebre, o cambios significativos en el apetito o el sueño, consulta a un pediatra. También, si notas que la respuesta sensorial es muy intensa (por ejemplo, se cubre los oídos o se aleja de la luz), un especialista en desarrollo sensorial puede ofrecer estrategias más personalizadas.
+
+¡Espero que estos pasos te ayuden a crear un momento más tranquilo y feliz para tu sobrina! 🌸
+
+[Resultado guardado en resultados/parte2.json]

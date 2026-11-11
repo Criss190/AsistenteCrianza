@@ -1,0 +1,14 @@
+
+=== Caso A: más imágenes de las permitidas ===
+Modelo: qwen/qwen3.8-27b | Imágenes enviadas: 4
+Tipo de error: BadRequestError
+Mensaje de la API:
+Error code: 400 - {'error': {'message': 'Too many images provided.  This model supports up to 3 images', 'type': 'invalid_request_error'}}
+
+=== Caso B: modelo sin visión ===
+Modelo: openai/gpt-oss-20b | Imágenes enviadas: 1
+Tipo de error: BadRequestError
+Mensaje de la API:
+Error code: 400 - {'error': {'message': 'messages[0].content must be a string', 'type': 'invalid_request_error', 'param': 'messages[0].content'}}
+
+[Resultado guardado en resultados/parte1_4.json]

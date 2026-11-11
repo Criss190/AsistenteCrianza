@@ -1,0 +1,76 @@
+
+=== ficha_nivel_1.png ===
+Salida del modelo:
+{
+  "nivel": 1,
+  "nombre": "Interacción divertida",
+  "principio": "Corrección",
+  "tono": "Acogedor",
+  "volumen": "Moderado",
+  "cadencia": "Rápida, divertida",
+  "tiempo_resolucion": "60 segundos o menos",
+  "pagina_fuente": 23
+}
+
+Validación: JSON válido
+Campo              Valor real                     Valor extraído                 ¿Correcto?
+nivel              1                              1                              Sí
+nombre             Interacción divertida          Interacción divertida          Sí
+principio          Corrección                     Corrección                     Sí
+tono               Acogedor                       Acogedor                       Sí
+volumen            Moderado                       Moderado                       Sí
+cadencia           Rápida, divertida              Rápida, divertida              Sí
+tiempo_resolucion  60 segundos o menos            60 segundos o menos            Sí
+pagina_fuente      23                             23                             Sí
+
+=== ficha_nivel_2.png ===
+Salida del modelo:
+{
+  "nivel": 2,
+  "nombre": "Interacción estructurada",
+  "principio": "Corrección",
+  "tono": "Bajo, firme, pero no severo",
+  "volumen": "Moderado",
+  "cadencia": "Moderada/lenta",
+  "tiempo_resolucion": "De 5 a 10 minutos o menos",
+  "pagina_fuente": 24
+}
+
+Validación: JSON válido
+Campo              Valor real                     Valor extraído                 ¿Correcto?
+nivel              2                              2                              Sí
+nombre             Interacción estructurada       Interacción estructurada       Sí
+principio          Corrección                     Corrección                     Sí
+tono               Bajo, firme, pero no severo    Bajo, firme, pero no severo    Sí
+volumen            Moderado                       Moderado                       Sí
+cadencia           Moderada/lenta                 Moderada/lenta                 Sí
+tiempo_resolucion  De 5 a 10 minutos o menos      De 5 a 10 minutos o menos      Sí
+pagina_fuente      24                             24                             Sí
+
+=== ficha_nivel_3.png ===
+Salida del modelo:
+{
+  "nivel": 3,
+  "nombre": "Interacción para calmar",
+  "principio": "Corrección",
+  "tono": "Firme",
+  "volumen": "Intenso pero no elevado",
+  "cadencia": "Lenta",
+  "tiempo_resolucion": "De 15 a 30 minutos o menos",
+  "pagina_fuente": 25
+}
+
+Validación: JSON válido
+Campo              Valor real                     Valor extraído                 ¿Correcto?
+nivel              3                              3                              Sí
+nombre             Interacción para calmar        Interacción para calmar        Sí
+principio          Corrección                     Corrección                     Sí
+tono               Firme                          Firme                          Sí
+volumen            Intenso pero no elevado        Intenso pero no elevado        Sí
+cadencia           Lenta                          Lenta                          Sí
+tiempo_resolucion  De 15 a 30 minutos o menos     De 15 a 30 minutos o menos     Sí
+pagina_fuente      25                             25                             Sí
+
+Porcentaje de aciertos: 24 de 24 campos = 100.0 %
+
+[Resultado guardado en resultados/parte1_2.json]

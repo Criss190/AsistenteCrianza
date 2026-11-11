@@ -1,0 +1,27 @@
+{
+  "casos": [
+    {
+      "caso": "Caso A: más imágenes de las permitidas",
+      "modelo": "qwen/qwen3.8-27b",
+      "imagenes": [
+        "ficha_nivel_1.png",
+        "ficha_nivel_2.png",
+        "ficha_nivel_3.png",
+        "ficha_nivel_4.png"
+      ],
+      "hubo_error": true,
+      "tipo": "BadRequestError",
+      "mensaje": "Error code: 400 - {'error': {'message': 'Too many images provided.  This model supports up to 3 images', 'type': 'invalid_request_error'}}"
+    },
+    {
+      "caso": "Caso B: modelo sin visión",
+      "modelo": "openai/gpt-oss-20b",
+      "imagenes": [
+        "semaforo_hidratacion.png"
+      ],
+      "hubo_error": true,
+      "tipo": "BadRequestError",
+      "mensaje": "Error code: 400 - {'error': {'message': 'messages[0].content must be a string', 'type': 'invalid_request_error', 'param': 'messages[0].content'}}"
+    }
+  ]
+}

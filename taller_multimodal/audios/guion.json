@@ -1,0 +1,22 @@
+{
+  "audio_1": {
+    "hablante": "Mariana Gordillo",
+    "condicion": "sin ruido",
+    "texto": "Hola. Mi hijo de cuatro años hace berrinches cada vez que le digo que no. Leí sobre TBRI, la Intervención Relacional Basada en la Confianza. ¿Qué es la Respuesta IDEAL y por qué dicen que debo responder en menos de tres segundos después del comportamiento?"
+  },
+  "audio_2": {
+    "hablante": "Julian Cristancho",
+    "condicion": "sin ruido",
+    "texto": "Tengo una duda sobre los Niveles de Respuesta de TBRI. ¿Cuál es la diferencia entre la interacción divertida, la interacción estructurada y la interacción para calmar? Mi hija de siete años me habla en tono exigente y voltea los ojos. ¿Qué nivel debo usar con ella?"
+  },
+  "audio_3": {
+    "hablante": "Mariana Gordillo",
+    "condicion": "sin ruido",
+    "texto": "¿Qué diferencia hay entre autorregulación y corregulación? Mi hijo de seis años se desregula en las transiciones, por ejemplo cuando hay que apagar el televisor. ¿Cómo puedo usar las opciones, los acuerdos y el tiempo de inclusión en lugar del tiempo fuera?"
+  },
+  "audio_4": {
+    "hablante": "Julian Cristancho",
+    "condicion": "con ruido",
+    "texto": "Mi sobrina de tres años se pone de mal humor todas las tardes. ¿Es cierto que la deshidratación y la glucemia baja afectan el comportamiento? ¿Qué estrategias fisiológicas de empoderamiento puedo aplicar y qué tiene que ver el procesamiento sensorial?"
+  }
+}

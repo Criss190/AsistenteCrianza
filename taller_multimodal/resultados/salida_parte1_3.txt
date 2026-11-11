@@ -1,0 +1,26 @@
+Modelo:   qwen/qwen3.8-27b
+Imágenes: respuesta_ideal.png, ficha_nivel_1.png, ficha_nivel_4.png
+Pregunta: Estas tres imágenes son material de crianza basado en TBRI: una resume la Respuesta IDEAL y las otras dos son fichas de Niveles de Respuesta. Compara las dos fichas (tono, volumen, cadencia, tiempo de resolución y conducta típica) y explica con cuál de las letras de la Respuesta IDEAL se relaciona el hecho de elegir un nivel u otro. Termina con un resumen conjunto de tres frases para un cuidador. Responde en menos de 250 palabras.
+
+Respuesta:
+**Comparación de fichas**
+
+| Dimensión | Nivel 1 (divertida) | Nivel 4 (proteger) |
+|---|---|---|
+| Tono | Acogedor | Muy firme |
+| Volumen | Moderado | Intenso pero no elevado |
+| Cadencia | Rápida, divertida | Muy lenta |
+| Resolución | ≤ 60 segundos | 30–60 minutos |
+| Conducta típica | Tono exigente, voltear ojos, interrumpir | Amenaza de daño o conducta fuera de control |
+
+**Letra de la Respuesta IDEAL**
+
+La elección entre un nivel y otro se rige por la **E de Eficiente**: "solo la estructura que la situación necesita". El cuidador calibra el nivel según la gravedad de la conducta: una interrupción leve pide la estructura mínima (Nivel 1), mientras que una amenaza de daño exige la estructura máxima (Nivel 4). Aplicar más o menos estructura de la necesaria rompe la eficiencia.
+
+**Resumen para el cuidador (3 frases)**
+
+1. Observa la conducta y elige el nivel justo: acogedor y rápido para lo leve, firme y lento para lo peligroso.
+2. Mantén siempre la respuesta inmediata, directa y enfocada al comportamiento, no a la persona.
+3. Usa solo la estructura que la situación necesita, para que el niño aprenda a repetir la conducta de forma correcta.
+
+[Resultado guardado en resultados/parte1_3.json]

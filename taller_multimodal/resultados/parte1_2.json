@@ -1,0 +1,174 @@
+{
+  "modelo": "qwen/qwen3.8-27b",
+  "instruccion": "Extrae los datos de esta ficha de crianza sobre los Niveles de Respuesta de TBRI. Responde SOLO con un objeto JSON, sin texto adicional, con exactamente estos campos:\n- \"nivel\": Número del Nivel de Respuesta (entero de 1 a 4)\n- \"nombre\": Nombre del nivel, por ejemplo 'Interacción divertida'\n- \"principio\": Principio de TBRI al que pertenece\n- \"tono\": Tono de voz recomendado para el adulto\n- \"volumen\": Volumen de voz recomendado\n- \"cadencia\": Cadencia o ritmo recomendado al hablar\n- \"tiempo_resolucion\": Tiempo de resolución, tal como aparece en la ficha\n- \"pagina_fuente\": Número de página de la fuente citada al pie (entero)\nValores permitidos: \"principio\" es \"Conexión\", \"Empoderamiento\" o \"Corrección\"; \"nivel\" y \"pagina_fuente\" son números enteros, no texto.",
+  "aciertos": 24,
+  "total": 24,
+  "porcentaje": 100.0,
+  "imagenes": [
+    {
+      "imagen": "ficha_nivel_1.png",
+      "salida_modelo": "{\n  \"nivel\": 1,\n  \"nombre\": \"Interacción divertida\",\n  \"principio\": \"Corrección\",\n  \"tono\": \"Acogedor\",\n  \"volumen\": \"Moderado\",\n  \"cadencia\": \"Rápida, divertida\",\n  \"tiempo_resolucion\": \"60 segundos o menos\",\n  \"pagina_fuente\": 23\n}",
+      "error_validacion": null,
+      "campos": [
+        {
+          "campo": "nivel",
+          "real": 1,
+          "extraido": 1,
+          "correcto": true
+        },
+        {
+          "campo": "nombre",
+          "real": "Interacción divertida",
+          "extraido": "Interacción divertida",
+          "correcto": true
+        },
+        {
+          "campo": "principio",
+          "real": "Corrección",
+          "extraido": "Corrección",
+          "correcto": true
+        },
+        {
+          "campo": "tono",
+          "real": "Acogedor",
+          "extraido": "Acogedor",
+          "correcto": true
+        },
+        {
+          "campo": "volumen",
+          "real": "Moderado",
+          "extraido": "Moderado",
+          "correcto": true
+        },
+        {
+          "campo": "cadencia",
+          "real": "Rápida, divertida",
+          "extraido": "Rápida, divertida",
+          "correcto": true
+        },
+        {
+          "campo": "tiempo_resolucion",
+          "real": "60 segundos o menos",
+          "extraido": "60 segundos o menos",
+          "correcto": true
+        },
+        {
+          "campo": "pagina_fuente",
+          "real": 23,
+          "extraido": 23,
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "imagen": "ficha_nivel_2.png",
+      "salida_modelo": "{\n  \"nivel\": 2,\n  \"nombre\": \"Interacción estructurada\",\n  \"principio\": \"Corrección\",\n  \"tono\": \"Bajo, firme, pero no severo\",\n  \"volumen\": \"Moderado\",\n  \"cadencia\": \"Moderada/lenta\",\n  \"tiempo_resolucion\": \"De 5 a 10 minutos o menos\",\n  \"pagina_fuente\": 24\n}",
+      "error_validacion": null,
+      "campos": [
+        {
+          "campo": "nivel",
+          "real": 2,
+          "extraido": 2,
+          "correcto": true
+        },
+        {
+          "campo": "nombre",
+          "real": "Interacción estructurada",
+          "extraido": "Interacción estructurada",
+          "correcto": true
+        },
+        {
+          "campo": "principio",
+          "real": "Corrección",
+          "extraido": "Corrección",
+          "correcto": true
+        },
+        {
+          "campo": "tono",
+          "real": "Bajo, firme, pero no severo",
+          "extraido": "Bajo, firme, pero no severo",
+          "correcto": true
+        },
+        {
+          "campo": "volumen",
+          "real": "Moderado",
+          "extraido": "Moderado",
+          "correcto": true
+        },
+        {
+          "campo": "cadencia",
+          "real": "Moderada/lenta",
+          "extraido": "Moderada/lenta",
+          "correcto": true
+        },
+        {
+          "campo": "tiempo_resolucion",
+          "real": "De 5 a 10 minutos o menos",
+          "extraido": "De 5 a 10 minutos o menos",
+          "correcto": true
+        },
+        {
+          "campo": "pagina_fuente",
+          "real": 24,
+          "extraido": 24,
+          "correcto": true
+        }
+      ]
+    },
+    {
+      "imagen": "ficha_nivel_3.png",
+      "salida_modelo": "{\n  \"nivel\": 3,\n  \"nombre\": \"Interacción para calmar\",\n  \"principio\": \"Corrección\",\n  \"tono\": \"Firme\",\n  \"volumen\": \"Intenso pero no elevado\",\n  \"cadencia\": \"Lenta\",\n  \"tiempo_resolucion\": \"De 15 a 30 minutos o menos\",\n  \"pagina_fuente\": 25\n}",
+      "error_validacion": null,
+      "campos": [
+        {
+          "campo": "nivel",
+          "real": 3,
+          "extraido": 3,
+          "correcto": true
+        },
+        {
+          "campo": "nombre",
+          "real": "Interacción para calmar",
+          "extraido": "Interacción para calmar",
+          "correcto": true
+        },
+        {
+          "campo": "principio",
+          "real": "Corrección",
+          "extraido": "Corrección",
+          "correcto": true
+        },
+        {
+          "campo": "tono",
+          "real": "Firme",
+          "extraido": "Firme",
+          "correcto": true
+        },
+        {
+          "campo": "volumen",
+          "real": "Intenso pero no elevado",
+          "extraido": "Intenso pero no elevado",
+          "correcto": true
+        },
+        {
+          "campo": "cadencia",
+          "real": "Lenta",
+          "extraido": "Lenta",
+          "correcto": true
+        },
+        {
+          "campo": "tiempo_resolucion",
+          "real": "De 15 a 30 minutos o menos",
+          "extraido": "De 15 a 30 minutos o menos",
+          "correcto": true
+        },
+        {
+          "campo": "pagina_fuente",
+          "real": 25,
+          "extraido": 25,
+          "correcto": true
+        }
+      ]
+    }
+  ]
+}
